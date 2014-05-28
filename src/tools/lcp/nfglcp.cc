@@ -28,12 +28,7 @@
 #include "nfglcp.h"
 #include "lhtab.h"
 
-
 using namespace Gambit;
-
-extern int g_numDecimals, g_stopAfter, g_maxDepth;
-extern bool g_printDetail;
-
 
 
 template <class T> Matrix<T> Make_A1(const StrategySupport &); 
@@ -41,6 +36,21 @@ template <class T> Vector<T> Make_b1(const StrategySupport &);
 template <class T> Matrix<T> Make_A2(const StrategySupport &);
 template <class T> Vector<T> Make_b2(const StrategySupport &);
 
+
+template <class T>
+class NashLcpStrategySolver<T>::Solution {
+public:
+  List<BFS<T> > m_bfsList;
+  List<MixedStrategyProfile<T> > m_equilibria;
+
+  bool Contains(const BFS<T> &p_bfs) const
+  { return m_bfsList.Contains(p_bfs); }
+  void push_back(const BFS<T> &p_bfs)
+  { m_bfsList.push_back(p_bfs); }
+
+  int EquilibriumCount(void) const { return m_equilibria.size(); }
+};
+  
 
 //
 // Function called when a CBFS is encountered.
@@ -51,14 +61,14 @@ template <class T> Vector<T> Make_b2(const StrategySupport &);
 //
 template <class T> bool
 NashLcpStrategySolver<T>::OnBFS(const StrategySupport &p_support,
-				List<BFS<T> > &p_list, LHTableau<T> &p_tableau) const
+				LHTableau<T> &p_tableau,
+				Solution &p_solution) const
 {
   BFS<T> cbfs(p_tableau.GetBFS());
-  if (p_list.Contains(cbfs)) {
+  if (p_solution.Contains(cbfs)) {
     return false;
   }
-
-  p_list.Append(cbfs);
+  p_solution.push_back(cbfs);
 
   MixedStrategyProfile<T> profile(p_support.NewMixedStrategyProfile<T>());
   int n1 = p_support.NumStrategies(1);
@@ -100,7 +110,7 @@ NashLcpStrategySolver<T>::OnBFS(const StrategySupport &p_support,
   
   this->m_onEquilibrium->Render(profile);
 
-  if (g_stopAfter > 0 && p_list.Length() >= g_stopAfter) {
+  if (m_stopAfter > 0 && p_solution.EquilibriumCount() >= m_stopAfter) {
     throw NashEquilibriumLimitReached();
   }
 
@@ -117,16 +127,16 @@ NashLcpStrategySolver<T>::OnBFS(const StrategySupport &p_support,
 template <class T> void 
 NashLcpStrategySolver<T>::AllLemke(const StrategySupport &p_support,
 				   int j, LHTableau<T> &B,
-				   List<BFS<T> > &p_list,
+				   Solution &p_solution,
 				   int depth) const
 {
-  if (g_maxDepth != 0 && depth > g_maxDepth) {
+  if (m_maxDepth != 0 && depth > m_maxDepth) {
     return;
   }
 
   // On the initial depth=0 call, the CBFS we are at is the extraneous
   // solution.
-  if (depth > 0 && !OnBFS(p_support, p_list, B)) {
+  if (depth > 0 && !OnBFS(p_support, B, p_solution)) {
     return;
   }
   
@@ -134,7 +144,7 @@ NashLcpStrategySolver<T>::AllLemke(const StrategySupport &p_support,
     if (i != j)  {
       LHTableau<T> Bcopy(B);
       Bcopy.LemkePath(i);
-      AllLemke(p_support, i, Bcopy, p_list, depth+1);
+      AllLemke(p_support, i, Bcopy, p_solution, depth+1);
     }
   }
 }
@@ -142,7 +152,7 @@ NashLcpStrategySolver<T>::AllLemke(const StrategySupport &p_support,
 template <class T> List<MixedStrategyProfile<T> > 
 NashLcpStrategySolver<T>::Solve(const StrategySupport &p_support) const
 {
-  List<BFS<T> > bfsList;
+  Solution solution;
 
   try {
     Matrix<T> A1 = Make_A1<T>(p_support);
@@ -151,27 +161,24 @@ NashLcpStrategySolver<T>::Solve(const StrategySupport &p_support) const
     Vector<T> b2 = Make_b2<T>(p_support);
     LHTableau<T> B(A1, A2, b1, b2);
 
-    if (g_stopAfter != 1) {
+    if (m_stopAfter != 1) {
       try {
-	AllLemke(p_support, 0, B, bfsList, 0);
+	AllLemke(p_support, 0, B, solution, 0);
       }
       catch (NashEquilibriumLimitReached &) {
 	// This pseudo-exception requires no additional action;
-	// bfsList will contain the list of equilibria found
+	// solution contains details of all equilibria found
       }
     }
     else  {
       B.LemkePath(1);
-      OnBFS(p_support, bfsList, B);
+      OnBFS(p_support, B, solution);
     }
   }
-  catch (...) {
-    // for now, we won't give *any* solutions -- but we should list
-    // any solutions found!
-    throw;
+  catch (std::runtime_error &e) {
+    std::cerr << "ERROR: " << e.what() << std::endl;
   }
-
-  return List<MixedStrategyProfile<T> >();
+  return solution.m_equilibria;
 }
 
 template class NashLcpStrategySolver<double>;

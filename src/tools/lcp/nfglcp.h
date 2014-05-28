@@ -28,21 +28,25 @@
 using namespace Gambit;
 
 template <class T> class LHTableau;
-template <class T> class BFS;
 
 template <class T> class NashLcpStrategySolver : public NashStrategySolver<T> {
 public:
-  NashLcpStrategySolver(shared_ptr<StrategyProfileRenderer<T> > p_onEquilibrium = 0)
-    : NashStrategySolver<T>(p_onEquilibrium) { }
+  NashLcpStrategySolver(int p_stopAfter, int p_maxDepth,
+		       shared_ptr<StrategyProfileRenderer<T> > p_onEquilibrium = 0)
+    : NashStrategySolver<T>(p_onEquilibrium),
+      m_stopAfter(p_stopAfter), m_maxDepth(p_maxDepth) { }
   virtual ~NashLcpStrategySolver()  { }
 
   virtual List<MixedStrategyProfile<T> > Solve(const StrategySupport &) const;
 
 private:
-  bool OnBFS(const StrategySupport &,
-	     List<BFS<T> > &, LHTableau<T> &) const;
-  void AllLemke(const StrategySupport &, int j, LHTableau<T> &,
-		List<BFS<T> > &, int) const;
+  int m_stopAfter, m_maxDepth;
+
+  class Solution;
+
+  bool OnBFS(const StrategySupport &, LHTableau<T> &, Solution &) const;
+  void AllLemke(const StrategySupport &, int j, LHTableau<T> &, 
+		Solution &, int) const;
 };
 
 

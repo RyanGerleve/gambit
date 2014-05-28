@@ -166,7 +166,8 @@ int main(int argc, char *argv[])
 	else {
 	  renderer = new MixedStrategyCSVRenderer<double>(std::cout, g_numDecimals);
 	}
-	NashLcpStrategySolver<double> algorithm(renderer);
+	NashLcpStrategySolver<double> algorithm(g_stopAfter, g_maxDepth,
+						renderer);
 	algorithm.Solve(game);
       }
       else {
@@ -177,7 +178,8 @@ int main(int argc, char *argv[])
 	else {
 	  renderer = new MixedStrategyCSVRenderer<Rational>(std::cout);
 	}
-	NashLcpStrategySolver<Rational> algorithm(renderer);
+	NashLcpStrategySolver<Rational> algorithm(g_stopAfter, g_maxDepth,
+						  renderer);
 	algorithm.Solve(game);
       }
     }
