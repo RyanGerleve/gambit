@@ -137,23 +137,28 @@ void PrintProfileDetail(std::ostream &p_stream,
   }
 }
 
-template <class T> class SolveEfgLcp {
-private:
-  int ns1,ns2,ni1,ni2;
-  T maxpay,eps;
+template <class T> class Solution {
+public:
+  int ns1, ns2, ni1, ni2;
+  Rational maxpay;
+  T eps;
   List<BFS<T> > m_list;
   List<GameInfoset> isets1, isets2;
+};
 
+template <class T> class SolveEfgLcp {
+private:
   void FillTableau(const BehavSupport &, Matrix<T> &, const GameNode &, T,
-		   int, int, int, int);
-  int AddBFS(const LTableau<T> &tab);
+		   int, int, int, int, Solution<T> &);
+  int AddBFS(const LTableau<T> &tab, Solution<T> &);
   int AllLemke(const BehavSupport &, int dup, LTableau<T> &B,
 	       int depth, Matrix<T> &,
-	       bool p_print, List<MixedBehavProfile<T> > &);
+	       bool p_print, Solution<T> &, List<MixedBehavProfile<T> > &);
   
   void GetProfile(const BehavSupport &, const LTableau<T> &tab, 
 		  MixedBehavProfile<T> &, const Vector<T> &, 
-		  const GameNode &n, int,int);
+		  const GameNode &n, int, int,
+		  Solution<T> &);
 
 public:
   SolveEfgLcp(void) { }
@@ -212,24 +217,23 @@ SolveEfgLcp<T>::Solve(const BehavSupport &p_support, bool p_print /*= true*/)
 {
   BFS<T> cbfs;
   int i, j;
+  Solution<T> solution;
 
-  isets1 = p_support.ReachableInfosets(p_support.GetGame()->GetPlayer(1));
-  isets2 = p_support.ReachableInfosets(p_support.GetGame()->GetPlayer(2));
-
-  m_list = List<BFS<T> >();
+  solution.isets1 = p_support.ReachableInfosets(p_support.GetGame()->GetPlayer(1));
+  solution.isets2 = p_support.ReachableInfosets(p_support.GetGame()->GetPlayer(2));
 
   int ntot;
-  ns1 = p_support.NumSequences(1);
-  ns2 = p_support.NumSequences(2);
-  ni1 = p_support.GetGame()->GetPlayer(1)->NumInfosets()+1;
-  ni2 = p_support.GetGame()->GetPlayer(2)->NumInfosets()+1;
+  solution.ns1 = p_support.NumSequences(1);
+  solution.ns2 = p_support.NumSequences(2);
+  solution.ni1 = p_support.GetGame()->GetPlayer(1)->NumInfosets()+1;
+  solution.ni2 = p_support.GetGame()->GetPlayer(2)->NumInfosets()+1;
 
-  ntot = ns1+ns2+ni1+ni2;
+  ntot = solution.ns1+solution.ns2+solution.ni1+solution.ni2;
 
   Matrix<T> A(1,ntot,0,ntot);
   Vector<T> b(1,ntot);
 
-  maxpay = p_support.GetGame()->GetMaxPayoff() + Rational(1);
+  solution.maxpay = p_support.GetGame()->GetMaxPayoff() + Rational(1);
 
   T prob = (T)1;
   for (i = A.MinRow(); i <= A.MaxRow(); i++) {
@@ -239,19 +243,20 @@ SolveEfgLcp<T>::Solve(const BehavSupport &p_support, bool p_print /*= true*/)
     }
   }
 
-  FillTableau(p_support, A, p_support.GetGame()->GetRoot(), prob, 1, 1, 0, 0);
+  FillTableau(p_support, A, p_support.GetGame()->GetRoot(), prob, 1, 1, 0, 0,
+	      solution);
   for (i = A.MinRow(); i <= A.MaxRow(); i++) { 
     A(i,0) = -(T) 1;
   }
-  A(1,ns1+ns2+1) = (T)1;
-  A(ns1+ns2+1,1) = -(T)1;
-  A(ns1+1,ns1+ns2+ni1+1) = (T)1;
-  A(ns1+ns2+ni1+1,ns1+1) = -(T)1;
-  b[ns1+ns2+1] = -(T)1;
-  b[ns1+ns2+ni1+1] = -(T)1;
+  A(1,solution.ns1+solution.ns2+1) = (T) 1;
+  A(solution.ns1+solution.ns2+1,1) = -(T) 1;
+  A(solution.ns1+1,solution.ns1+solution.ns2+solution.ni1+1) = (T) 1;
+  A(solution.ns1+solution.ns2+solution.ni1+1,solution.ns1+1) = -(T) 1;
+  b[solution.ns1+solution.ns2+1] = -(T)1;
+  b[solution.ns1+solution.ns2+solution.ni1+1] = -(T)1;
 
   LTableau<T> tab(A,b);
-  eps = tab.Epsilon();
+  solution.eps = tab.Epsilon();
   
   MixedBehavProfile<T> profile(p_support);
   Vector<T> sol(tab.MinRow(),tab.MaxRow());
@@ -260,7 +265,8 @@ SolveEfgLcp<T>::Solve(const BehavSupport &p_support, bool p_print /*= true*/)
   try {
     if (g_stopAfter != 1) {
       try {
-	AllLemke(p_support, ns1+ns2+1, tab, 0, A, p_print, solutions);
+	AllLemke(p_support, solution.ns1+solution.ns2+1, 
+		 tab, 0, A, p_print, solution, solutions);
       }
       catch (NashEquilibriumLimitReached &) {
 	// Just handle this silently; equilibria are already printed
@@ -268,13 +274,14 @@ SolveEfgLcp<T>::Solve(const BehavSupport &p_support, bool p_print /*= true*/)
       }
     }
     else {
-      tab.Pivot(ns1+ns2+1,0);
-      tab.SF_LCPPath(ns1+ns2+1);
+      tab.Pivot(solution.ns1+solution.ns2+1,0);
+      tab.SF_LCPPath(solution.ns1+solution.ns2+1);
       
-      AddBFS(tab);
+      AddBFS(tab, solution);
       tab.BasisVector(sol);
       GetProfile(p_support, tab, 
-		 profile,sol,p_support.GetGame()->GetRoot(),1,1);
+		 profile,sol,p_support.GetGame()->GetRoot(), 1, 1,
+		 solution);
       UndefinedToCentroid(profile);
 
       PrintProfile(std::cout, "NE", profile);
@@ -290,7 +297,8 @@ SolveEfgLcp<T>::Solve(const BehavSupport &p_support, bool p_print /*= true*/)
   return solutions;
 }
 
-template <class T> int SolveEfgLcp<T>::AddBFS(const LTableau<T> &tableau)
+template <class T> int SolveEfgLcp<T>::AddBFS(const LTableau<T> &tableau,
+					      Solution<T> &p_solution)
 {
   BFS<T> cbfs;
   Vector<T> v(tableau.MinRow(), tableau.MaxRow());
@@ -302,8 +310,8 @@ template <class T> int SolveEfgLcp<T>::AddBFS(const LTableau<T> &tableau)
     }
   }
 
-  if (m_list.Contains(cbfs))  return 0;
-  m_list.Append(cbfs);
+  if (p_solution.m_list.Contains(cbfs))  return 0;
+  p_solution.m_list.Append(cbfs);
   return 1;
 }
 
@@ -319,6 +327,7 @@ SolveEfgLcp<T>::AllLemke(const BehavSupport &p_support,
 			 int j, LTableau<T> &B, int depth,
 			 Matrix<T> &A,
 			 bool p_print,
+			 Solution<T> &p_solution,
 			 List<MixedBehavProfile<T> > &p_solutions)
 {
   if (g_maxDepth != 0 && depth > g_maxDepth) {
@@ -349,10 +358,11 @@ SolveEfgLcp<T>::AllLemke(const BehavSupport &p_support,
       newsol = 0;
 
       if (BCopy.SF_LCPPath(-missing) == 1) {
-	newsol = AddBFS(BCopy);
+	newsol = AddBFS(BCopy, p_solution);
 	BCopy.BasisVector(sol);
 	GetProfile(p_support, BCopy, profile, sol,
-		   p_support.GetGame()->GetRoot(), 1, 1);
+		   p_support.GetGame()->GetRoot(), 1, 1,
+		   p_solution);
 	UndefinedToCentroid(profile);
 	if (newsol) {
 	  if (p_print) {
@@ -374,7 +384,8 @@ SolveEfgLcp<T>::AllLemke(const BehavSupport &p_support,
       A(i,0) = (T) -1;
       if (newsol) {
 	BCopy.Refactor();
-	AllLemke(p_support, i, BCopy, depth+1, A, p_print, p_solutions);
+	AllLemke(p_support, i, BCopy, depth+1, A, p_print, p_solution,
+		 p_solutions);
       }
     }
   }
@@ -385,15 +396,21 @@ SolveEfgLcp<T>::AllLemke(const BehavSupport &p_support,
 template <class T>
 void SolveEfgLcp<T>::FillTableau(const BehavSupport &p_support, Matrix<T> &A,
 				 const GameNode &n, T prob,
-				 int s1, int s2, int i1, int i2)
+				 int s1, int s2, int i1, int i2,
+				 Solution<T> &p_solution)
 {
   int snew;
+  int ns1 = p_solution.ns1;
+  int ns2 = p_solution.ns2;
+  int ni1 = p_solution.ni1;
+  int ni2 = p_solution.ni2;
+
   GameOutcome outcome = n->GetOutcome();
   if (outcome) {
     A(s1,ns1+s2) = Rational(A(s1,ns1+s2)) +
-      Rational(prob) * (outcome->GetPayoff<Rational>(1) - Rational(maxpay));
+      Rational(prob) * (outcome->GetPayoff<Rational>(1) - p_solution.maxpay);
     A(ns1+s2,s1) = Rational(A(ns1+s2,s1)) +
-      Rational(prob) * (outcome->GetPayoff<Rational>(2) - Rational(maxpay));
+      Rational(prob) * (outcome->GetPayoff<Rational>(2) - p_solution.maxpay);
   }
   if (n->GetInfoset()) {
     if (n->GetPlayer()->IsChance()) {
@@ -401,38 +418,38 @@ void SolveEfgLcp<T>::FillTableau(const BehavSupport &p_support, Matrix<T> &A,
       for (int i = 1; i <= n->NumChildren(); i++) {
 	FillTableau(p_support, A, n->GetChild(i),
 		    Rational(prob) * infoset->GetActionProb(i, Rational(0)),
-		    s1,s2,i1,i2);
+		    s1, s2, i1, i2, p_solution);
       }
     }
     int pl = n->GetPlayer()->GetNumber();
     if (pl==1) {
-      i1=isets1.Find(n->GetInfoset());
+      i1=p_solution.isets1.Find(n->GetInfoset());
       snew=1;
       for (int i = 1; i < i1; i++) {
-	snew+=p_support.NumActions(isets1[i]->GetPlayer()->GetNumber(),
-				   isets1[i]->GetNumber());
+	snew+=p_support.NumActions(p_solution.isets1[i]->GetPlayer()->GetNumber(),
+				   p_solution.isets1[i]->GetNumber());
       }
       A(s1,ns1+ns2+i1+1) = -(T)1;
       A(ns1+ns2+i1+1,s1) = (T)1;
       for (int i = 1; i <= p_support.NumActions(n->GetInfoset()->GetPlayer()->GetNumber(), n->GetInfoset()->GetNumber()); i++) {
 	A(snew+i,ns1+ns2+i1+1) = (T)1;
 	A(ns1+ns2+i1+1,snew+i) = -(T)1;
-	FillTableau(p_support, A, n->GetChild(p_support.GetAction(n->GetInfoset()->GetPlayer()->GetNumber(), n->GetInfoset()->GetNumber(), i)->GetNumber()),prob,snew+i,s2,i1,i2);
+	FillTableau(p_support, A, n->GetChild(p_support.GetAction(n->GetInfoset()->GetPlayer()->GetNumber(), n->GetInfoset()->GetNumber(), i)->GetNumber()),prob,snew+i,s2,i1,i2, p_solution);
       }
     }
     if(pl==2) {
-      i2=isets2.Find(n->GetInfoset());
+      i2=p_solution.isets2.Find(n->GetInfoset());
       snew=1;
       for (int i = 1; i < i2; i++) {
-	snew+=p_support.NumActions(isets2[i]->GetPlayer()->GetNumber(),
-				   isets2[i]->GetNumber());
+	snew+=p_support.NumActions(p_solution.isets2[i]->GetPlayer()->GetNumber(),
+				   p_solution.isets2[i]->GetNumber());
       }
       A(ns1+s2,ns1+ns2+ni1+i2+1) = -(T)1;
       A(ns1+ns2+ni1+i2+1,ns1+s2) = (T)1;
       for (int i = 1; i <= p_support.NumActions(n->GetInfoset()->GetPlayer()->GetNumber(), n->GetInfoset()->GetNumber()); i++) {
 	A(ns1+snew+i,ns1+ns2+ni1+i2+1) = (T)1;
 	A(ns1+ns2+ni1+i2+1,ns1+snew+i) = -(T)1;
-	FillTableau(p_support, A, n->GetChild(p_support.GetAction(n->GetInfoset()->GetPlayer()->GetNumber(), n->GetInfoset()->GetNumber(), i)->GetNumber()),prob,s1,snew+i,i1,i2);
+	FillTableau(p_support, A, n->GetChild(p_support.GetAction(n->GetInfoset()->GetPlayer()->GetNumber(), n->GetInfoset()->GetNumber(), i)->GetNumber()),prob,s1,snew+i,i1,i2, p_solution);
       }
     }
     
@@ -445,32 +462,37 @@ void SolveEfgLcp<T>::GetProfile(const BehavSupport &p_support,
 				const LTableau<T> &tab, 
 				MixedBehavProfile<T> &v, 
 				const Vector<T> &sol,
-				const GameNode &n, int s1,int s2)
+				const GameNode &n, int s1, int s2,
+				Solution<T> &p_solution)
 {
+  int ns1 = p_solution.ns1;
+  int ns2 = p_solution.ns2;
+
   if (n->GetInfoset()) {
     int pl = n->GetPlayer()->GetNumber();
     int iset = n->GetInfoset()->GetNumber();
 
     if (n->GetPlayer()->IsChance()) {
       for (int i = 1; i <= n->NumChildren(); i++) {
-	GetProfile(p_support, tab, v, sol, n->GetChild(i), s1, s2);
+	GetProfile(p_support, tab, v, sol, n->GetChild(i), s1, s2,
+		   p_solution);
       }
     }
     else if (pl == 1) {
-      int inf = isets1.Find(n->GetInfoset());
+      int inf = p_solution.isets1.Find(n->GetInfoset());
       int snew = 1;
       for (int i = 1; i < inf; i++) {
-	snew += p_support.NumActions(1, isets1[i]->GetNumber()); 
+	snew += p_support.NumActions(1, p_solution.isets1[i]->GetNumber()); 
       }
       
       for (int i = 1; i <= p_support.NumActions(pl, iset); i++) {
 	v(pl,inf,i) = (T) 0;
 	if (tab.Member(s1)) {
 	  int ind = tab.Find(s1);
-	  if (sol[ind] > eps) {
+	  if (sol[ind] > p_solution.eps) {
 	    if (tab.Member(snew+i)) {
 	      int ind2 = tab.Find(snew+i);
-	      if (sol[ind2] > eps) {
+	      if (sol[ind2] > p_solution.eps) {
 		v(pl,inf,i) = sol[ind2] / sol[ind];
 	      }
 	    }
@@ -478,24 +500,24 @@ void SolveEfgLcp<T>::GetProfile(const BehavSupport &p_support,
 	} 
 	GetProfile(p_support, tab, v, sol,
 		   n->GetChild(p_support.GetAction(pl, iset, i)->GetNumber()),
-		   snew+i, s2);
+		   snew+i, s2, p_solution);
       }
     }
     else if (pl == 2) { 
-      int inf = isets2.Find(n->GetInfoset());
+      int inf = p_solution.isets2.Find(n->GetInfoset());
       int snew = 1;
       for (int i = 1; i < inf; i++) {
-	snew += p_support.NumActions(2, isets2[i]->GetNumber()); 
+	snew += p_support.NumActions(2, p_solution.isets2[i]->GetNumber()); 
       }
 
       for (int i = 1; i<= p_support.NumActions(pl, iset); i++) {
 	v(pl,inf,i) = (T) 0;
 	if (tab.Member(ns1+s2)) {
 	  int ind = tab.Find(ns1+s2);
-	  if (sol[ind] > eps) {
+	  if (sol[ind] > p_solution.eps) {
 	    if (tab.Member(ns1+snew+i)) {
 	      int ind2 = tab.Find(ns1+snew+i);
-	      if (sol[ind2] > eps) {
+	      if (sol[ind2] > p_solution.eps) {
 		v(pl,inf,i) = sol[ind2] / sol[ind];
 	      }
 	    }
@@ -503,7 +525,7 @@ void SolveEfgLcp<T>::GetProfile(const BehavSupport &p_support,
 	} 
 	GetProfile(p_support, tab, v, sol,
 		   n->GetChild(p_support.GetAction(pl, iset, i)->GetNumber()),
-		   s1, snew+i);
+		   s1, snew+i, p_solution);
       }
     }
   }
