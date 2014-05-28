@@ -158,14 +158,25 @@ int main(int argc, char *argv[])
 
     if (!game->IsTree() || useStrategic) {
       if (useFloat) {
-	shared_ptr<StrategyProfileRenderer<double> > renderer =
-	  new MixedStrategyCSVRenderer<double>(std::cout, g_numDecimals);
+	shared_ptr<StrategyProfileRenderer<double> > renderer;
+	if (g_printDetail)  {
+	  renderer = new MixedStrategyDetailRenderer<double>(std::cout,
+							     g_numDecimals);
+	}
+	else {
+	  renderer = new MixedStrategyCSVRenderer<double>(std::cout, g_numDecimals);
+	}
 	NashLcpStrategySolver<double> algorithm(renderer);
 	algorithm.Solve(game);
       }
       else {
-	shared_ptr<StrategyProfileRenderer<Rational> > renderer =
-	  new MixedStrategyCSVRenderer<Rational>(std::cout);
+	shared_ptr<StrategyProfileRenderer<Rational> > renderer;
+	if (g_printDetail) {
+	  renderer = new MixedStrategyDetailRenderer<Rational>(std::cout);
+	}
+	else {
+	  renderer = new MixedStrategyCSVRenderer<Rational>(std::cout);
+	}
 	NashLcpStrategySolver<Rational> algorithm(renderer);
 	algorithm.Solve(game);
       }

@@ -52,67 +52,6 @@ public:
 } // end anonymous namespace
 
 
-void PrintProfile(std::ostream &p_stream,
-		  const std::string &p_label,
-		  const MixedStrategyProfile<double> &p_profile)
-{
-  p_stream << p_label;
-  for (int i = 1; i <= p_profile.MixedProfileLength(); i++) {
-    p_stream.setf(std::ios::fixed);
-    p_stream << "," << std::setprecision(g_numDecimals) << p_profile[i];
-  }
-
-  p_stream << std::endl;
-}
-
-void PrintProfile(std::ostream &p_stream,
-		  const std::string &p_label,
-		  const MixedStrategyProfile<Rational> &p_profile)
-{
-  p_stream << p_label;
-  for (int i = 1; i <= p_profile.MixedProfileLength(); i++) {
-    p_stream << "," << p_profile[i];
-  }
-
-  p_stream << std::endl;
-}
-
-template <class T>
-void PrintProfileDetail(std::ostream &p_stream,
-			const MixedStrategyProfile<T> &p_profile)
-{
-  char buffer[256];
-
-  for (int pl = 1; pl <= p_profile.GetGame()->NumPlayers(); pl++) {
-    GamePlayer player = p_profile.GetGame()->GetPlayer(pl);
-    p_stream << "Strategy profile for player " << pl << ":\n";
-    
-    p_stream << "Strategy   Prob          Value\n";
-    p_stream << "-------    -----------   -----------\n";
-
-    for (int st = 1; st <= player->NumStrategies(); st++) {
-      GameStrategy strategy = player->GetStrategy(st);
-
-      if (strategy->GetLabel() != "") {
-	sprintf(buffer, "%7s    ", strategy->GetLabel().c_str());
-      }
-      else {
-	sprintf(buffer, "%7d   ", st);
-      }
-      p_stream << buffer;
-	
-      sprintf(buffer, "%11s   ", lexical_cast<std::string>(p_profile[strategy], g_numDecimals).c_str());
-      p_stream << buffer;
-
-      sprintf(buffer, "%11s   ", lexical_cast<std::string>(p_profile.GetPayoff(strategy), g_numDecimals).c_str());
-      p_stream << buffer;
-
-      p_stream << "\n";
-    }
-  }
-}
-
-
 template <class T> Matrix<T> Make_A1(const StrategySupport &); 
 template <class T> Vector<T> Make_b1(const StrategySupport &);
 template <class T> Matrix<T> Make_A2(const StrategySupport &);
@@ -176,9 +115,6 @@ NashLcpStrategySolver<T>::OnBFS(const StrategySupport &p_support,
   }
   
   this->m_onEquilibrium->Render(profile);
-  if (g_printDetail) {
-    PrintProfileDetail(std::cout, profile);
-  }
 
   if (g_stopAfter > 0 && p_list.Length() >= g_stopAfter) {
     throw EquilibriumLimitReachedNfg();
