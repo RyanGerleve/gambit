@@ -157,10 +157,9 @@ NashLcpBehavSolver<T>::Solve(const BehavSupport &p_support) const
       this->m_onEquilibrium->Render(profile);
     }
   }
-  catch (...) {
-    // catch exception; return solutions computed (if any)
+  catch (std::runtime_error &e) {
+    std::cerr << "Error: " << e.what() << std::endl;
   }
-
   return solutions;
 }
 
