@@ -32,13 +32,17 @@ template <class T> class LTableau;
 
 template <class T> class NashLcpBehavSolver : public NashBehavSolver<T> {
 public:
-  NashLcpBehavSolver(shared_ptr<StrategyProfileRenderer<T> > p_onEquilibrium = 0)
-    : NashBehavSolver<T>(p_onEquilibrium) { }
+  NashLcpBehavSolver(int p_stopAfter, int p_maxDepth,
+	  	     shared_ptr<StrategyProfileRenderer<T> > p_onEquilibrium = 0)
+    : NashBehavSolver<T>(p_onEquilibrium),
+      m_stopAfter(p_stopAfter), m_maxDepth(p_maxDepth) { }
   virtual ~NashLcpBehavSolver()  { }
 
   virtual List<MixedBehavProfile<T> > Solve(const BehavSupport &) const;
 
 private:
+  int m_stopAfter, m_maxDepth;
+
   void FillTableau(const BehavSupport &, Matrix<T> &, const GameNode &, T,
 		   int, int, int, int, Solution<T> &) const;
   int AddBFS(const LTableau<T> &tab, Solution<T> &) const;

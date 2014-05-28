@@ -25,117 +25,12 @@
 #include <unistd.h>
 #include <iostream>
 #include "libgambit/libgambit.h"
-#include "libgambit/nash.h"
+#include "efglcp.h"
 
 using namespace Gambit;
 
 #include "lhtab.h"
 #include "lemketab.h"
-
-extern int g_numDecimals;
-extern int g_stopAfter;
-extern int g_maxDepth;
-extern bool g_printDetail;
-
-
-void PrintProfile(std::ostream &p_stream,
-		  const std::string &p_label,
-		  const MixedBehavProfile<double> &p_profile)
-{
-  p_stream << p_label;
-  for (int i = 1; i <= p_profile.Length(); i++) {
-    p_stream.setf(std::ios::fixed);
-    p_stream << "," << std::setprecision(g_numDecimals) << p_profile[i];
-  }
-
-  p_stream << std::endl;
-}
-
-void PrintProfile(std::ostream &p_stream,
-		  const std::string &p_label,
-		  const MixedBehavProfile<Rational> &p_profile)
-{
-  p_stream << p_label;
-  for (int i = 1; i <= p_profile.Length(); i++) {
-    p_stream << "," << p_profile[i];
-  }
-
-  p_stream << std::endl;
-}
-
-template <class T>
-void PrintProfileDetail(std::ostream &p_stream,
-			const MixedBehavProfile<T> &p_profile)
-{
-  char buffer[256];
-
-  for (int pl = 1; pl <= p_profile.GetGame()->NumPlayers(); pl++) {
-    GamePlayer player = p_profile.GetGame()->GetPlayer(pl);
-    p_stream << "Behavior profile for player " << pl << ":\n";
-    
-    p_stream << "Infoset    Action     Prob          Value\n";
-    p_stream << "-------    -------    -----------   -----------\n";
-
-    for (int iset = 1; iset <= player->NumInfosets(); iset++) {
-      GameInfoset infoset = player->GetInfoset(iset);
-
-      for (int act = 1; act <= infoset->NumActions(); act++) {
-	GameAction action = infoset->GetAction(act);
-
-	if (infoset->GetLabel() != "") {
-	  sprintf(buffer, "%7s    ", infoset->GetLabel().c_str());
-	}
-	else {
-	  sprintf(buffer, "%7d    ", iset);
-	}
-	p_stream << buffer;
-	
-	if (action->GetLabel() != "") {
-	  sprintf(buffer, "%7s    ", action->GetLabel().c_str());
-	}
-	else {
-	  sprintf(buffer, "%7d   ", act);
-	}
-	p_stream << buffer;
-	
-	sprintf(buffer, "%11s   ", lexical_cast<std::string>(p_profile(pl, iset, act), g_numDecimals).c_str());
-	p_stream << buffer;
-
-	sprintf(buffer, "%11s   ", lexical_cast<std::string>(p_profile.GetPayoff(infoset->GetAction(act)), g_numDecimals).c_str());
-	p_stream << buffer;
-
-	p_stream << "\n";
-      }
-    }
-
-    p_stream << "\n";
- 
-    p_stream << "Infoset    Node       Belief        Prob\n";
-    p_stream << "-------    -------    -----------   -----------\n";
-
-    for (int iset = 1; iset <= player->NumInfosets(); iset++) {
-      GameInfoset infoset = player->GetInfoset(iset);
-      
-      for (int n = 1; n <= infoset->NumMembers(); n++) {
-	sprintf(buffer, "%7d    ", iset);
-	p_stream << buffer;
-
-	sprintf(buffer, "%7d    ", n);
-	p_stream << buffer;
-
-	sprintf(buffer, "%11s   ", lexical_cast<std::string>(p_profile.GetBeliefProb(infoset->GetMember(n)), g_numDecimals).c_str());
-	p_stream << buffer;
-
-	sprintf(buffer, "%11s    ", lexical_cast<std::string>(p_profile.GetRealizProb(infoset->GetMember(n)), g_numDecimals).c_str());
-	p_stream << buffer;
-
-	p_stream << "\n";
-      }
-    }
-
-    p_stream << "\n";
-  }
-}
 
 template <class T> class Solution {
 public:
@@ -146,31 +41,7 @@ public:
   List<GameInfoset> isets1, isets2;
 };
 
-template <class T> class SolveEfgLcp {
-private:
-  void FillTableau(const BehavSupport &, Matrix<T> &, const GameNode &, T,
-		   int, int, int, int, Solution<T> &);
-  int AddBFS(const LTableau<T> &tab, Solution<T> &);
-  int AllLemke(const BehavSupport &, int dup, LTableau<T> &B,
-	       int depth, Matrix<T> &,
-	       bool p_print, Solution<T> &, List<MixedBehavProfile<T> > &);
-  
-  void GetProfile(const BehavSupport &, const LTableau<T> &tab, 
-		  MixedBehavProfile<T> &, const Vector<T> &, 
-		  const GameNode &n, int, int,
-		  Solution<T> &);
 
-public:
-  SolveEfgLcp(void) { }
-  
-  List<MixedBehavProfile<T> > Solve(const BehavSupport &,
-				    bool p_print = true);
-};
-
-
-//---------------------------------------------------------------------------
-//                        SolveEfgLcp: member functions
-//---------------------------------------------------------------------------
 
 //
 // Sets the action probabilities at unreached information sets
@@ -213,7 +84,7 @@ void UndefinedToCentroid(MixedBehavProfile<T> &p_profile)
 //
 
 template <class T> List<MixedBehavProfile<T> > 
-SolveEfgLcp<T>::Solve(const BehavSupport &p_support, bool p_print /*= true*/)
+NashLcpBehavSolver<T>::Solve(const BehavSupport &p_support) const
 {
   BFS<T> cbfs;
   int i, j;
@@ -263,10 +134,10 @@ SolveEfgLcp<T>::Solve(const BehavSupport &p_support, bool p_print /*= true*/)
   List<MixedBehavProfile<T> > solutions;
   
   try {
-    if (g_stopAfter != 1) {
+    if (m_stopAfter != 1) {
       try {
 	AllLemke(p_support, solution.ns1+solution.ns2+1, 
-		 tab, 0, A, p_print, solution, solutions);
+		 tab, 0, A, solution, solutions);
       }
       catch (NashEquilibriumLimitReached &) {
 	// Just handle this silently; equilibria are already printed
@@ -283,11 +154,7 @@ SolveEfgLcp<T>::Solve(const BehavSupport &p_support, bool p_print /*= true*/)
 		 profile,sol,p_support.GetGame()->GetRoot(), 1, 1,
 		 solution);
       UndefinedToCentroid(profile);
-
-      PrintProfile(std::cout, "NE", profile);
-      if (g_printDetail) {
-	PrintProfileDetail(std::cout, profile);
-      }
+      this->m_onEquilibrium->Render(profile);
     }
   }
   catch (...) {
@@ -297,8 +164,9 @@ SolveEfgLcp<T>::Solve(const BehavSupport &p_support, bool p_print /*= true*/)
   return solutions;
 }
 
-template <class T> int SolveEfgLcp<T>::AddBFS(const LTableau<T> &tableau,
-					      Solution<T> &p_solution)
+template <class T> int 
+NashLcpBehavSolver<T>::AddBFS(const LTableau<T> &tableau,
+			      Solution<T> &p_solution) const
 {
   BFS<T> cbfs;
   Vector<T> v(tableau.MinRow(), tableau.MaxRow());
@@ -323,14 +191,13 @@ template <class T> int SolveEfgLcp<T>::AddBFS(const LTableau<T> &tableau,
 // all possible paths, adding any new equilibria to the List.  
 //
 template <class T> int 
-SolveEfgLcp<T>::AllLemke(const BehavSupport &p_support,
-			 int j, LTableau<T> &B, int depth,
-			 Matrix<T> &A,
-			 bool p_print,
-			 Solution<T> &p_solution,
-			 List<MixedBehavProfile<T> > &p_solutions)
+NashLcpBehavSolver<T>::AllLemke(const BehavSupport &p_support,
+				int j, LTableau<T> &B, int depth,
+				Matrix<T> &A,
+				Solution<T> &p_solution,
+				List<MixedBehavProfile<T> > &p_solutions) const
 {
-  if (g_maxDepth != 0 && depth > g_maxDepth) {
+  if (m_maxDepth != 0 && depth > m_maxDepth) {
     return 1;
   }
 
@@ -365,14 +232,9 @@ SolveEfgLcp<T>::AllLemke(const BehavSupport &p_support,
 		   p_solution);
 	UndefinedToCentroid(profile);
 	if (newsol) {
-	  if (p_print) {
-	    PrintProfile(std::cout, "NE", profile);
-	    if (g_printDetail) {
-	      PrintProfileDetail(std::cout, profile);
-	    }
-	  }
+	  this->m_onEquilibrium->Render(profile);
 	  p_solutions.Append(profile);
-	  if (g_stopAfter > 0 && p_solutions.Length() >= g_stopAfter) {
+	  if (m_stopAfter > 0 && p_solutions.Length() >= m_stopAfter) {
 	    throw NashEquilibriumLimitReached();
 	  }
 	}
@@ -384,8 +246,7 @@ SolveEfgLcp<T>::AllLemke(const BehavSupport &p_support,
       A(i,0) = (T) -1;
       if (newsol) {
 	BCopy.Refactor();
-	AllLemke(p_support, i, BCopy, depth+1, A, p_print, p_solution,
-		 p_solutions);
+	AllLemke(p_support, i, BCopy, depth+1, A, p_solution, p_solutions);
       }
     }
   }
@@ -394,10 +255,11 @@ SolveEfgLcp<T>::AllLemke(const BehavSupport &p_support,
 }
 
 template <class T>
-void SolveEfgLcp<T>::FillTableau(const BehavSupport &p_support, Matrix<T> &A,
-				 const GameNode &n, T prob,
-				 int s1, int s2, int i1, int i2,
-				 Solution<T> &p_solution)
+void NashLcpBehavSolver<T>::FillTableau(const BehavSupport &p_support, 
+					Matrix<T> &A,
+					const GameNode &n, T prob,
+					int s1, int s2, int i1, int i2,
+					Solution<T> &p_solution) const
 {
   int snew;
   int ns1 = p_solution.ns1;
@@ -458,12 +320,12 @@ void SolveEfgLcp<T>::FillTableau(const BehavSupport &p_support, Matrix<T> &A,
 
 
 template <class T>
-void SolveEfgLcp<T>::GetProfile(const BehavSupport &p_support,
-				const LTableau<T> &tab, 
-				MixedBehavProfile<T> &v, 
-				const Vector<T> &sol,
-				const GameNode &n, int s1, int s2,
-				Solution<T> &p_solution)
+void NashLcpBehavSolver<T>::GetProfile(const BehavSupport &p_support,
+				       const LTableau<T> &tab, 
+				       MixedBehavProfile<T> &v, 
+				       const Vector<T> &sol,
+				       const GameNode &n, int s1, int s2,
+				       Solution<T> &p_solution) const
 {
   int ns1 = p_solution.ns1;
   int ns2 = p_solution.ns2;
@@ -531,29 +393,7 @@ void SolveEfgLcp<T>::GetProfile(const BehavSupport &p_support,
   }
 }
 
-template <class T>
-List<MixedBehavProfile<T> > SolveExtensive(const BehavSupport &p_support)
-{
-  SolveEfgLcp<T> algorithm;
-  return algorithm.Solve(p_support);
-}
-
-template List<MixedBehavProfile<double> > 
-SolveExtensive(const BehavSupport &);
-template List<MixedBehavProfile<Rational> > 
-SolveExtensive(const BehavSupport &);
-
-
-template <class T>
-List<MixedBehavProfile<T> > SolveExtensiveSilent(const BehavSupport &p_support)
-{
-  SolveEfgLcp<T> algorithm;
-  return algorithm.Solve(p_support, false);
-}
-
-template List<MixedBehavProfile<double> > 
-SolveExtensiveSilent(const BehavSupport &);
-template List<MixedBehavProfile<Rational> > 
-SolveExtensiveSilent(const BehavSupport &);
+template class NashLcpBehavSolver<double>;
+template class NashLcpBehavSolver<Rational>;
 
 
