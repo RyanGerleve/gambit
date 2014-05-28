@@ -22,17 +22,25 @@
 
 #include "nash.h"
 
-using namespace Gambit;
+namespace Gambit {
 
-template <class T>
-void MixedStrategyCSVRenderer<T>::Render(const MixedStrategyProfile<T> &p_profile) const
+template<>
+void MixedStrategyCSVRenderer<double>::Render(const MixedStrategyProfile<double> &p_profile) const
 {
-  m_stream << "NE,";
+  m_stream << "NE";
   for (int i = 1; i <= p_profile.MixedProfileLength(); i++) {
-    m_stream << p_profile[i];
-    if (i < p_profile.MixedProfileLength()) {
-      m_stream << ',';
-    }
+    m_stream.setf(std::ios::fixed);
+    m_stream << "," << std::setprecision(m_numDecimals) << p_profile[i];
+  }
+  m_stream << std::endl;
+}
+
+template<>
+void MixedStrategyCSVRenderer<Rational>::Render(const MixedStrategyProfile<Rational> &p_profile) const
+{
+  m_stream << "NE";
+  for (int i = 1; i <= p_profile.MixedProfileLength(); i++) {
+    m_stream << "," << p_profile[i];
   }
   m_stream << std::endl;
 }
@@ -359,3 +367,5 @@ template class NashBehavViaStrategySolver<Rational>;
 
 template class SubgameNashBehavSolver<double>;
 template class SubgameNashBehavSolver<Rational>;
+
+} // end namespace Gambit

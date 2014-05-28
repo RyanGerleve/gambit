@@ -175,7 +175,7 @@ NashLcpStrategySolver<T>::OnBFS(const StrategySupport &p_support,
     }
   }
   
-  PrintProfile(std::cout, "NE", profile);
+  this->m_onEquilibrium->Render(profile);
   if (g_printDetail) {
     PrintProfileDetail(std::cout, profile);
   }

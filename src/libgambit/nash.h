@@ -61,12 +61,14 @@ public:
 template <class T>
 class MixedStrategyCSVRenderer : public MixedStrategyRenderer<T> {
 public:
-  MixedStrategyCSVRenderer(std::ostream &p_stream) : m_stream(p_stream) { }
+  MixedStrategyCSVRenderer(std::ostream &p_stream, int p_numDecimals = 6)
+    : m_stream(p_stream), m_numDecimals(p_numDecimals) { }
   virtual ~MixedStrategyCSVRenderer() { }
   virtual void Render(const MixedStrategyProfile<T> &p_profile) const;
 
 private:
   std::ostream &m_stream;
+  int m_numDecimals;
 };
 
 //
