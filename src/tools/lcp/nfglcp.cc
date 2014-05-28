@@ -34,22 +34,6 @@ using namespace Gambit;
 extern int g_numDecimals, g_stopAfter, g_maxDepth;
 extern bool g_printDetail;
 
-namespace {
-//
-// Pseudo-exception raised when maximum number of equilibria to compute
-// has been reached.  A convenience for unraveling a potentially
-// deep recursion.
-//
-// FIXME: There is an identical twin of this in efglcp.cc.  This should be
-// refactored into a more generally-useful and generally-visible location.
-//
-class EquilibriumLimitReachedNfg : public Exception {
-public:
-  virtual ~EquilibriumLimitReachedNfg() throw() { }
-  const char *what(void) const throw() { return "Reached target number of equilibria"; }
-};
-
-} // end anonymous namespace
 
 
 template <class T> Matrix<T> Make_A1(const StrategySupport &); 
@@ -117,7 +101,7 @@ NashLcpStrategySolver<T>::OnBFS(const StrategySupport &p_support,
   this->m_onEquilibrium->Render(profile);
 
   if (g_stopAfter > 0 && p_list.Length() >= g_stopAfter) {
-    throw EquilibriumLimitReachedNfg();
+    throw NashEquilibriumLimitReached();
   }
 
   return true;
@@ -171,7 +155,7 @@ NashLcpStrategySolver<T>::Solve(const StrategySupport &p_support) const
       try {
 	AllLemke(p_support, 0, B, bfsList, 0);
       }
-      catch (EquilibriumLimitReachedNfg &) {
+      catch (NashEquilibriumLimitReached &) {
 	// This pseudo-exception requires no additional action;
 	// bfsList will contain the list of equilibria found
       }

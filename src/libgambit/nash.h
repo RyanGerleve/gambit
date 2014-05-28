@@ -178,6 +178,16 @@ private:
 		     List<GameOutcome> &values) const;
 };
 
+//
+// Exception raised when maximum number of equilibria to compute
+// has been reached.  A convenience for unraveling a potentially
+// deep recursion.
+//
+class NashEquilibriumLimitReached : public Exception {
+public:
+  virtual ~NashEquilibriumLimitReached() throw() { }
+  const char *what(void) const throw() { return "Reached target number of equilibria"; }
+};
 
 }  // namespace Gambit
 
