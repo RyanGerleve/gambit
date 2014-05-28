@@ -25,7 +25,9 @@
 #include <iostream>
 
 #include "libgambit/libgambit.h"
+#include "nfglcp.h"
 #include "lhtab.h"
+
 
 using namespace Gambit;
 
@@ -124,9 +126,9 @@ template <class T> Vector<T> Make_b2(const StrategySupport &);
 // Returns 'true' if the CBFS is new; 'false' if it already appears in the
 // list.
 //
-template <class T>
-bool OnBFS(const StrategySupport &p_support,
-	   List<BFS<T> > &p_list, LHTableau<T> &p_tableau)
+template <class T> bool
+NashLcpStrategySolver<T>::OnBFS(const StrategySupport &p_support,
+				List<BFS<T> > &p_list, LHTableau<T> &p_tableau) const
 {
   BFS<T> cbfs(p_tableau.GetBFS());
   if (p_list.Contains(cbfs)) {
@@ -192,10 +194,11 @@ bool OnBFS(const StrategySupport &p_support,
 // From each new accessible equilibrium, it follows
 // all possible paths, adding any new equilibria to the List.  
 //
-template <class T> void AllLemke(const StrategySupport &p_support,
-				 int j, LHTableau<T> &B,
-				 List<BFS<T> > &p_list,
-				 int depth)
+template <class T> void 
+NashLcpStrategySolver<T>::AllLemke(const StrategySupport &p_support,
+				   int j, LHTableau<T> &B,
+				   List<BFS<T> > &p_list,
+				   int depth) const
 {
   if (g_maxDepth != 0 && depth > g_maxDepth) {
     return;
@@ -216,22 +219,21 @@ template <class T> void AllLemke(const StrategySupport &p_support,
   }
 }
 
-template <class T>
-void SolveStrategic(const Game &p_game)
+template <class T> List<MixedStrategyProfile<T> > 
+NashLcpStrategySolver<T>::Solve(const StrategySupport &p_support) const
 {
-  StrategySupport support(p_game);
   List<BFS<T> > bfsList;
 
   try {
-    Matrix<T> A1 = Make_A1<T>(support);
-    Vector<T> b1 = Make_b1<T>(support);
-    Matrix<T> A2 = Make_A2<T>(support);
-    Vector<T> b2 = Make_b2<T>(support);
+    Matrix<T> A1 = Make_A1<T>(p_support);
+    Vector<T> b1 = Make_b1<T>(p_support);
+    Matrix<T> A2 = Make_A2<T>(p_support);
+    Vector<T> b2 = Make_b2<T>(p_support);
     LHTableau<T> B(A1, A2, b1, b2);
 
     if (g_stopAfter != 1) {
       try {
-	AllLemke(support, 0, B, bfsList, 0);
+	AllLemke(p_support, 0, B, bfsList, 0);
       }
       catch (EquilibriumLimitReachedNfg &) {
 	// This pseudo-exception requires no additional action;
@@ -240,19 +242,20 @@ void SolveStrategic(const Game &p_game)
     }
     else  {
       B.LemkePath(1);
-      OnBFS(support, bfsList, B);
+      OnBFS(p_support, bfsList, B);
     }
-
-    return;
   }
   catch (...) {
     // for now, we won't give *any* solutions -- but we should list
     // any solutions found!
     throw;
   }
+
+  return List<MixedStrategyProfile<T> >();
 }
 
-template void SolveStrategic<double>(const Game &);
-template void SolveStrategic<Rational>(const Game &);
+template class NashLcpStrategySolver<double>;
+template class NashLcpStrategySolver<Rational>;
+
 
 

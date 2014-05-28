@@ -28,6 +28,7 @@
 #include <getopt.h>
 #include "libgambit/libgambit.h"
 #include "libgambit/subgame.h"
+#include "nfglcp.h"
 
 using namespace Gambit;
 
@@ -35,7 +36,6 @@ template <class T>
 List<MixedBehavProfile<T> > SolveExtensive(const BehavSupport &p);
 template <class T>
 List<MixedBehavProfile<T> > SolveExtensiveSilent(const BehavSupport &p);
-template <class T> void SolveStrategic(const Game &p_game);
 
 void PrintBanner(std::ostream &p_stream)
 {
@@ -158,10 +158,16 @@ int main(int argc, char *argv[])
 
     if (!game->IsTree() || useStrategic) {
       if (useFloat) {
-	SolveStrategic<double>(game);
+	shared_ptr<StrategyProfileRenderer<double> > renderer =
+	  new MixedStrategyCSVRenderer<double>(std::cout);
+	NashLcpStrategySolver<double> algorithm(renderer);
+	algorithm.Solve(game);
       }
       else {
-	SolveStrategic<Rational>(game);
+	shared_ptr<StrategyProfileRenderer<Rational> > renderer =
+	  new MixedStrategyCSVRenderer<Rational>(std::cout);
+	NashLcpStrategySolver<Rational> algorithm(renderer);
+	algorithm.Solve(game);
       }
     }
     else {
