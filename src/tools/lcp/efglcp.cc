@@ -32,17 +32,6 @@ using namespace Gambit;
 #include "lhtab.h"
 #include "lemketab.h"
 
-template <class T> class Solution {
-public:
-  int ns1, ns2, ni1, ni2;
-  Rational maxpay;
-  T eps;
-  List<BFS<T> > m_list;
-  List<GameInfoset> isets1, isets2;
-};
-
-
-
 //
 // Sets the action probabilities at unreached information sets
 // which are left undefined by the sequence form method to
@@ -77,6 +66,42 @@ void UndefinedToCentroid(MixedBehavProfile<T> &p_profile)
 }
 
 
+template <class T> class NashLcpBehavSolver<T>::Solution {
+public:
+  int ns1, ns2, ni1, ni2;
+  Rational maxpay;
+  T eps;
+  List<GameInfoset> isets1, isets2;
+  List<BFS<T> > m_list;
+  List<MixedBehavProfile<T> > m_equilibria;
+
+  bool AddBFS(const LTableau<T> &);
+
+  int EquilibriumCount(void) const { return m_equilibria.size(); }
+};
+
+template <class T> bool 
+NashLcpBehavSolver<T>::Solution::AddBFS(const LTableau<T> &tableau)
+{
+  BFS<T> cbfs;
+  Vector<T> v(tableau.MinRow(), tableau.MaxRow());
+  tableau.BasisVector(v);
+
+  for (int i = tableau.MinCol(); i <= tableau.MaxCol(); i++) {
+    if (tableau.Member(i)) {
+      cbfs.insert(i, v[tableau.Find(i)]);
+    }
+  }
+
+  if (!m_list.Contains(cbfs)) {
+    m_list.push_back(cbfs);
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
 //
 // Lemke implements the Lemke's algorithm (as refined by Eaves 
 // for degenerate problems) for  Linear Complementarity
@@ -88,7 +113,7 @@ NashLcpBehavSolver<T>::Solve(const BehavSupport &p_support) const
 {
   BFS<T> cbfs;
   int i, j;
-  Solution<T> solution;
+  Solution solution;
 
   solution.isets1 = p_support.ReachableInfosets(p_support.GetGame()->GetPlayer(1));
   solution.isets2 = p_support.ReachableInfosets(p_support.GetGame()->GetPlayer(2));
@@ -129,15 +154,11 @@ NashLcpBehavSolver<T>::Solve(const BehavSupport &p_support) const
   LTableau<T> tab(A,b);
   solution.eps = tab.Epsilon();
   
-  MixedBehavProfile<T> profile(p_support);
-  Vector<T> sol(tab.MinRow(),tab.MaxRow());
-  List<MixedBehavProfile<T> > solutions;
-  
   try {
     if (m_stopAfter != 1) {
       try {
 	AllLemke(p_support, solution.ns1+solution.ns2+1, 
-		 tab, 0, A, solution, solutions);
+		 tab, 0, A, solution);
       }
       catch (NashEquilibriumLimitReached &) {
 	// Just handle this silently; equilibria are already printed
@@ -145,42 +166,28 @@ NashLcpBehavSolver<T>::Solve(const BehavSupport &p_support) const
       }
     }
     else {
+      MixedBehavProfile<T> profile(p_support);
+      Vector<T> sol(tab.MinRow(),tab.MaxRow());
+  
       tab.Pivot(solution.ns1+solution.ns2+1,0);
       tab.SF_LCPPath(solution.ns1+solution.ns2+1);
       
-      AddBFS(tab, solution);
+      solution.AddBFS(tab);
       tab.BasisVector(sol);
       GetProfile(p_support, tab, 
 		 profile,sol,p_support.GetGame()->GetRoot(), 1, 1,
 		 solution);
       UndefinedToCentroid(profile);
+      solution.m_equilibria.push_back(profile);
       this->m_onEquilibrium->Render(profile);
     }
   }
   catch (std::runtime_error &e) {
     std::cerr << "Error: " << e.what() << std::endl;
   }
-  return solutions;
+  return solution.m_equilibria;
 }
 
-template <class T> int 
-NashLcpBehavSolver<T>::AddBFS(const LTableau<T> &tableau,
-			      Solution<T> &p_solution) const
-{
-  BFS<T> cbfs;
-  Vector<T> v(tableau.MinRow(), tableau.MaxRow());
-  tableau.BasisVector(v);
-
-  for (int i = tableau.MinCol(); i <= tableau.MaxCol(); i++) {
-    if (tableau.Member(i)) {
-      cbfs.insert(i, v[tableau.Find(i)]);
-    }
-  }
-
-  if (p_solution.m_list.Contains(cbfs))  return 0;
-  p_solution.m_list.Append(cbfs);
-  return 1;
-}
 
 //
 // All_Lemke finds all accessible Nash equilibria by recursively 
@@ -189,68 +196,65 @@ NashLcpBehavSolver<T>::AddBFS(const LTableau<T> &tableau,
 // From each new accessible equilibrium, it follows
 // all possible paths, adding any new equilibria to the List.  
 //
-template <class T> int 
+template <class T> void
 NashLcpBehavSolver<T>::AllLemke(const BehavSupport &p_support,
 				int j, LTableau<T> &B, int depth,
 				Matrix<T> &A,
-				Solution<T> &p_solution,
-				List<MixedBehavProfile<T> > &p_solutions) const
+				Solution &p_solution) const
 {
   if (m_maxDepth != 0 && depth > m_maxDepth) {
-    return 1;
+    return;
   }
 
-  int i,newsol,missing;
   T small_num = (T)1/(T)1000;
 
   Vector<T> sol(B.MinRow(),B.MaxRow());
   MixedBehavProfile<T> profile(p_support);
 
-  newsol =0;
-  for (i = B.MinRow(); i <= B.MaxRow() && newsol == 0; i++) {
-    if (i != j)  {
-      LTableau<T> BCopy(B);
-      A(i,0) = -small_num;
-      BCopy.Refactor();
+  bool newsol = false;
+  for (int i = B.MinRow(); i <= B.MaxRow() && !newsol; i++) {
+    if (i == j) continue;
 
-      if (depth == 0) {
-	BCopy.Pivot(j, 0);
-	missing = -j;
-      }
-      else {
-	missing = BCopy.SF_PivotIn(0);
-      }
+    LTableau<T> BCopy(B);
+    A(i,0) = -small_num;
+    BCopy.Refactor();
 
-      newsol = 0;
+    int missing;
+    if (depth == 0) {
+      BCopy.Pivot(j, 0);
+      missing = -j;
+    }
+    else {
+      missing = BCopy.SF_PivotIn(0);
+    }
 
-      if (BCopy.SF_LCPPath(-missing) == 1) {
-	newsol = AddBFS(BCopy, p_solution);
-	BCopy.BasisVector(sol);
-	GetProfile(p_support, BCopy, profile, sol,
-		   p_support.GetGame()->GetRoot(), 1, 1,
-		   p_solution);
-	UndefinedToCentroid(profile);
-	if (newsol) {
-	  this->m_onEquilibrium->Render(profile);
-	  p_solutions.Append(profile);
-	  if (m_stopAfter > 0 && p_solutions.Length() >= m_stopAfter) {
-	    throw NashEquilibriumLimitReached();
-	  }
+    newsol = false;
+
+    if (BCopy.SF_LCPPath(-missing) == 1) {
+      newsol = p_solution.AddBFS(BCopy);
+      BCopy.BasisVector(sol);
+      GetProfile(p_support, BCopy, profile, sol,
+		 p_support.GetGame()->GetRoot(), 1, 1,
+		 p_solution);
+      UndefinedToCentroid(profile);
+      if (newsol) {
+	this->m_onEquilibrium->Render(profile);
+	p_solution.m_equilibria.push_back(profile);
+	if (m_stopAfter > 0 && p_solution.EquilibriumCount() >= m_stopAfter) {
+	  throw NashEquilibriumLimitReached();
 	}
       }
-      else {
-	// gout << ": Dead End";
-      }
+    }
+    else {
+      // gout << ": Dead End";
+    }
       
-      A(i,0) = (T) -1;
-      if (newsol) {
-	BCopy.Refactor();
-	AllLemke(p_support, i, BCopy, depth+1, A, p_solution, p_solutions);
-      }
+    A(i,0) = (T) -1;
+    if (newsol) {
+      BCopy.Refactor();
+      AllLemke(p_support, i, BCopy, depth+1, A, p_solution);
     }
   }
-  
-  return 1;
 }
 
 template <class T>
@@ -258,7 +262,7 @@ void NashLcpBehavSolver<T>::FillTableau(const BehavSupport &p_support,
 					Matrix<T> &A,
 					const GameNode &n, T prob,
 					int s1, int s2, int i1, int i2,
-					Solution<T> &p_solution) const
+					Solution &p_solution) const
 {
   int snew;
   int ns1 = p_solution.ns1;
@@ -324,7 +328,7 @@ void NashLcpBehavSolver<T>::GetProfile(const BehavSupport &p_support,
 				       MixedBehavProfile<T> &v, 
 				       const Vector<T> &sol,
 				       const GameNode &n, int s1, int s2,
-				       Solution<T> &p_solution) const
+				       Solution &p_solution) const
 {
   int ns1 = p_solution.ns1;
   int ns2 = p_solution.ns2;

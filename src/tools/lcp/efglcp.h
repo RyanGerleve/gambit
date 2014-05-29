@@ -27,7 +27,6 @@
 
 using namespace Gambit;
 
-template <class T> class Solution;
 template <class T> class LTableau;
 
 template <class T> class NashLcpBehavSolver : public NashBehavSolver<T> {
@@ -43,17 +42,16 @@ public:
 private:
   int m_stopAfter, m_maxDepth;
 
+  class Solution;
+
   void FillTableau(const BehavSupport &, Matrix<T> &, const GameNode &, T,
-		   int, int, int, int, Solution<T> &) const;
-  int AddBFS(const LTableau<T> &tab, Solution<T> &) const;
-  int AllLemke(const BehavSupport &, int dup, LTableau<T> &B,
-	       int depth, Matrix<T> &,
-	       Solution<T> &, 
-	       List<MixedBehavProfile<T> > &) const;
+		   int, int, int, int, Solution &) const;
+  void AllLemke(const BehavSupport &, int dup, LTableau<T> &B,
+	       int depth, Matrix<T> &, Solution &) const; 
   void GetProfile(const BehavSupport &, const LTableau<T> &tab, 
 		  MixedBehavProfile<T> &, const Vector<T> &, 
 		  const GameNode &n, int, int,
-		  Solution<T> &) const;
+		  Solution &) const;
 };
 
 
