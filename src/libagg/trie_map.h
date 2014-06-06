@@ -131,7 +131,7 @@ public:
 
   //prefix matching
   //return a reference to iterator
-  inline iterator& find (const key_type& k) const __attribute__((always_inline));
+  inline iterator& find (const key_type& k) const;
 
   //exact matching
   inline iterator findExact (const key_type& k);
@@ -451,7 +451,7 @@ private:
 
 
 
-  __attribute__((noinline)) void deleteNodes(TrieNode<V> *n){
+  void deleteNodes(TrieNode<V> *n){
 	if (!n) return;
 	size_type i,s=n->children.size();
 	for (i=0;i<s;++i) if (n->children[i]) {
@@ -482,7 +482,7 @@ private:
 
   //in order traversal
   template <class UnaryFunction>
-  __attribute__((noinline)) void in_order_subtree(UnaryFunction& f, TrieNode<V> *n, bool debug=false)
+  void in_order_subtree(UnaryFunction& f, TrieNode<V> *n, bool debug=false)
   {
     if (n==NULL) return;
     size_type i,s=n->children.size();

@@ -25,7 +25,7 @@
 
 template <class V>
 inline std::pair<typename trie_map<V>::iterator, bool>
-trie_map<V>::insert(const trie_map<V>::value_type& x) {
+trie_map<V>::insert(const typename trie_map<V>::value_type& x) {
 
   static size_t ind;
   static std::vector<int>::const_iterator p;//,s;
@@ -50,8 +50,8 @@ trie_map<V>::insert(const trie_map<V>::value_type& x) {
 
 
 template <class V>
-inline __attribute__((always_inline))  typename trie_map<V>::iterator&
-trie_map<V>::find(const trie_map<V>::key_type& k) const
+inline typename trie_map<V>::iterator&
+trie_map<V>::find(const typename trie_map<V>::key_type& k) const
 {
   size_t i=0;
   TrieNode<V>* ptr=root;
@@ -63,7 +63,7 @@ trie_map<V>::find(const trie_map<V>::key_type& k) const
 
 template <class V>
 inline typename trie_map<V>::iterator
-trie_map<V>::findExact(const trie_map<V>::key_type& k)
+trie_map<V>::findExact(const typename trie_map<V>::key_type& k)
 {
     size_t i=0;
     TrieNode<V>* ptr=root;

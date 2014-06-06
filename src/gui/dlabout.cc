@@ -61,7 +61,7 @@ gbtAboutDialog::gbtAboutDialog(wxWindow *p_parent)
 			      wxFont(12, wxMODERN, wxNORMAL, wxNORMAL)),
 		0, wxTOP | wxALIGN_CENTER, 10);
 
-  topSizer->Add(FormattedText(this, _("Built with " wxVERSION_STRING),
+  topSizer->Add(FormattedText(this, _(wxT("Built with ") wxVERSION_STRING),
 			      wxFont(12, wxROMAN, wxNORMAL, wxNORMAL)),
 		0, wxTOP | wxALIGN_CENTER, 20);
   topSizer->Add(FormattedText(this, _T("http://www.wxwidgets.org"),

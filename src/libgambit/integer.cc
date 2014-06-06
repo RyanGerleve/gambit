@@ -41,6 +41,7 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <cfloat>
 #include <climits>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include "libgambit/libgambit.h"
 
@@ -1424,7 +1425,7 @@ void divide(const Integer& Ix, long y, Integer& Iq, long& rem)
     rem = Itolong(r);
     if (!STATIC_IntegerRep(r)) delete r;
   }
-  rem = abs(rem).as_long();
+  rem = std::abs(rem);
   if (xsgn == I_NEGATIVE) rem = -rem;
   q->sgn = samesign;
   Icheck(q);

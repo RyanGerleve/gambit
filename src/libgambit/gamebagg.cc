@@ -22,6 +22,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 #include "libgambit.h"
 #include "gamebagg.h"
@@ -87,13 +88,13 @@ void BagentPureStrategyProfileRep::SetOutcome(GameOutcome p_outcome)
 Rational BagentPureStrategyProfileRep::GetPayoff(int pl) const
 {
 	bagg* baggPtr = dynamic_cast<GameBagentRep &>(*m_nfg).baggPtr;
-	int s[m_nfg->NumPlayers()];
+	std::vector<int> s(m_nfg->NumPlayers());
 	for(int p=1; p<=m_nfg->NumPlayers(); ++p){
 		s[p-1] = m_profile[p]->GetNumber() -1;
 	}
 	int bp = dynamic_cast<GameBagentRep &>(*m_nfg).agent2baggPlayer[pl];
 	int tp = pl - 1 - baggPtr->typeOffset[bp-1];
-	return baggPtr->getPurePayoff(bp-1,tp,s);
+	return baggPtr->getPurePayoff(bp-1,tp,&s[0]);
 }
 
 Rational
@@ -101,7 +102,7 @@ BagentPureStrategyProfileRep::GetStrategyValue(const GameStrategy &p_strategy) c
 {
   int player = p_strategy->GetPlayer()->GetNumber();
   bagg* baggPtr = dynamic_cast<GameBagentRep &>(*m_nfg).baggPtr;
-  int s[m_nfg->NumPlayers()];
+  std::vector<int> s(m_nfg->NumPlayers());
   for(int p=1; p<=m_nfg->NumPlayers(); ++p){
   		s[p-1] = m_profile[p]->GetNumber() -1;
   }
@@ -109,7 +110,7 @@ BagentPureStrategyProfileRep::GetStrategyValue(const GameStrategy &p_strategy) c
 
   int bp = dynamic_cast<GameBagentRep &>(*m_nfg).agent2baggPlayer[player];
   int tp = player - 1 - baggPtr->typeOffset[bp-1];
-  return baggPtr->getPurePayoff(bp-1,tp,s);
+  return baggPtr->getPurePayoff(bp-1,tp,&s[0]);
 }
 
 

@@ -516,7 +516,7 @@ if(NOT Gambit_DISABLE_GUI)
 	if(wxWidgets_FOUND)
 		# TODO: Check wxWidgets version
 		include(${wxWidgets_USE_FILE})
-		add_executable(gambit ${gambit_SOURCES})
+		add_executable(gambit WIN32 ${gambit_SOURCES})
 		target_link_libraries(gambit libgambit ${wxWidgets_LIBRARIES})
 	else()
 		message("wxWidgets not found. The GUI will be unavailable.")

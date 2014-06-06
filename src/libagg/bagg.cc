@@ -193,7 +193,7 @@ bagg* bagg::makeRandomBAGG(int N,vector<int> &numTypes,vector<ProbDist> &TDist,i
   }
 
 
-  int actions[N];
+  vector<int> actions(N);
   for(int i=0;i<N;++i){
     actions[i]=aggActionSets[i].size();
   }
@@ -210,7 +210,7 @@ bagg* bagg::makeRandomBAGG(int N,vector<int> &numTypes,vector<ProbDist> &TDist,i
   }
 
 
-  agg* aggPtr = agg::makeRandomAGG(N,actions,S,P, aggActionSets, neighb, projTypes, seed,int_payoffs,int_factor);
+  agg* aggPtr = agg::makeRandomAGG(N,&actions[0],S,P, aggActionSets, neighb, projTypes, seed,int_payoffs,int_factor);
   if(!aggPtr){
 	  std::cerr<<"MakeRandomBAGG(): failed to make underlying AGG."<<endl;
 	  return NULL;

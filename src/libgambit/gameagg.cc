@@ -22,6 +22,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 #include "libgambit.h"
 #include "gameagg.h"
@@ -87,11 +88,11 @@ void AggPureStrategyProfileRep::SetOutcome(GameOutcome p_outcome)
 Rational AggPureStrategyProfileRep::GetPayoff(int pl) const
 {
 	agg* aggPtr = dynamic_cast<GameAggRep &>(*m_nfg).aggPtr;
-	int s[aggPtr->getNumPlayers()];
+	std::vector<int> s(aggPtr->getNumPlayers());
 	for(int p=1; p<=aggPtr->getNumPlayers(); ++p){
 		s[p-1] = m_profile[p]->GetNumber() -1;
 	}
-	return aggPtr->getPurePayoff(pl-1,s);
+	return aggPtr->getPurePayoff(pl-1,&s[0]);
 }
 
 Rational
@@ -99,12 +100,12 @@ AggPureStrategyProfileRep::GetStrategyValue(const GameStrategy &p_strategy) cons
 {
   int player = p_strategy->GetPlayer()->GetNumber();
   agg* aggPtr = dynamic_cast<GameAggRep &>(*m_nfg).aggPtr;
-  int s[aggPtr->getNumPlayers()];
+  std::vector<int> s(aggPtr->getNumPlayers());
   for(int p=1; p<=aggPtr->getNumPlayers(); ++p){
   		s[p-1] = m_profile[p]->GetNumber() -1;
   }
   s[player-1] = p_strategy->GetNumber() -1;
-  return aggPtr->getPurePayoff(player-1,s);
+  return aggPtr->getPurePayoff(player-1,&s[0]);
 }
 
 
