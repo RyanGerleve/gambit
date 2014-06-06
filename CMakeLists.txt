@@ -26,6 +26,9 @@ project(Gambit)
 
 set(Gambit_VERSION 14.0.2)
 
+option(Gambit_DISABLE_GUI "Don't build graphical interface" OFF)
+option(Gambit_DISABLE_ENUMPOLY "Don't build gambit-enumpoly (not supported on 64bit)" OFF)
+
 configure_file(
 	"${PROJECT_SOURCE_DIR}/config.cmake.h.in"
 	"${PROJECT_BINARY_DIR}/config.h"
@@ -161,112 +164,113 @@ set(gambit_enummixed_SOURCES
 add_executable(gambit-enummixed ${gambit_enummixed_SOURCES})
 target_link_libraries(gambit-enummixed libgambit liblinear)
 
-# For enumpoly, sources starting in 'pel' are from Pelican;
-# sources from gpartltr to quiksolv were formerly in convenience lib libpoly.
-set(gambit_enumpoly_SOURCES
-	src/tools/enumpoly/pelclhpk.cc
-	src/tools/enumpoly/pelclhpk.h
-	src/tools/enumpoly/pelclqhl.cc
-	src/tools/enumpoly/pelclqhl.h
-	src/tools/enumpoly/pelclyal.cc
-	src/tools/enumpoly/pelclyal.h
-	src/tools/enumpoly/pelconv.cc
-	src/tools/enumpoly/pelconv.h
-	src/tools/enumpoly/peleval.cc
-	src/tools/enumpoly/peleval.h
-	src/tools/enumpoly/pelgennd.cc
-	src/tools/enumpoly/pelgennd.h
-	src/tools/enumpoly/pelgmatr.cc
-	src/tools/enumpoly/pelgmatr.h
-	src/tools/enumpoly/pelgntyp.h
-	src/tools/enumpoly/pelhomot.cc
-	src/tools/enumpoly/pelhomot.h
-	src/tools/enumpoly/pelpred.cc
-	src/tools/enumpoly/pelpred.h
-	src/tools/enumpoly/pelprgen.cc
-	src/tools/enumpoly/pelprgen.h
-	src/tools/enumpoly/pelproc.cc
-	src/tools/enumpoly/pelproc.h
-	src/tools/enumpoly/pelpscon.h
-	src/tools/enumpoly/pelpsys.cc
-	src/tools/enumpoly/pelpsys.h
-	src/tools/enumpoly/pelqhull.cc
-	src/tools/enumpoly/pelqhull.h
-	src/tools/enumpoly/pelsymbl.cc
-	src/tools/enumpoly/pelsymbl.h
-	src/tools/enumpoly/pelutils.cc
-	src/tools/enumpoly/pelutils.h
-	src/tools/enumpoly/gpartltr.cc
-	src/tools/enumpoly/gpartltr.h
-	src/tools/enumpoly/gpartltr.imp
-	src/tools/enumpoly/gpoly.cc
-	src/tools/enumpoly/gpoly.h
-	src/tools/enumpoly/gpoly.imp
-	src/tools/enumpoly/gpolyctr.h
-	src/tools/enumpoly/gpolylst.cc
-	src/tools/enumpoly/gpolylst.h
-	src/tools/enumpoly/gpolylst.imp
-	src/tools/enumpoly/gsolver.cc
-	src/tools/enumpoly/gsolver.h
-	src/tools/enumpoly/gsolver.imp
-	src/tools/enumpoly/ideal.cc
-	src/tools/enumpoly/ideal.h
-	src/tools/enumpoly/ideal.imp
-	src/tools/enumpoly/ineqsolv.cc
-	src/tools/enumpoly/ineqsolv.h
-	src/tools/enumpoly/ineqsolv.imp
-	src/tools/enumpoly/interval.cc
-	src/tools/enumpoly/interval.h
-	src/tools/enumpoly/interval.imp
-	src/tools/enumpoly/monomial.cc
-	src/tools/enumpoly/monomial.h
-	src/tools/enumpoly/monomial.imp
-	src/tools/enumpoly/pelclass.cc
-	src/tools/enumpoly/pelclass.h
-	src/tools/enumpoly/poly.cc
-	src/tools/enumpoly/poly.h
-	src/tools/enumpoly/poly.imp
-	src/tools/enumpoly/prepoly.cc
-	src/tools/enumpoly/prepoly.h
-	src/tools/enumpoly/quiksolv.cc
-	src/tools/enumpoly/quiksolv.h
-	src/tools/enumpoly/quiksolv.imp
-	src/tools/enumpoly/rectangl.cc
-	src/tools/enumpoly/rectangl.h
-	src/tools/enumpoly/rectangl.imp
-	src/tools/enumpoly/behavextend.cc
-	src/tools/enumpoly/behavextend.h
-	src/tools/enumpoly/complex.cc
-	src/tools/enumpoly/complex.h
-	src/tools/enumpoly/gtree.h
-	src/tools/enumpoly/gtree.imp
-	src/tools/enumpoly/linrcomb.cc
-	src/tools/enumpoly/linrcomb.h
-	src/tools/enumpoly/linrcomb.imp
-	src/tools/enumpoly/efgensup.cc
-	src/tools/enumpoly/efgensup.h
-	src/tools/enumpoly/gnarray.h
-	src/tools/enumpoly/gnarray.imp
-	src/tools/enumpoly/sfg.cc
-	src/tools/enumpoly/sfg.h
-	src/tools/enumpoly/sfstrat.cc
-	src/tools/enumpoly/sfstrat.h
-	src/tools/enumpoly/nfgensup.cc
-	src/tools/enumpoly/nfgensup.h
-	src/tools/enumpoly/odometer.cc
-	src/tools/enumpoly/odometer.h
-	src/tools/enumpoly/nfgcpoly.cc
-	src/tools/enumpoly/nfgcpoly.h
-	src/tools/enumpoly/nfghs.cc
-	src/tools/enumpoly/nfghs.h
-	src/tools/enumpoly/efgpoly.cc
-	src/tools/enumpoly/nfgpoly.cc
-	src/tools/enumpoly/enumpoly.cc
-)
+if(NOT Gambit_DISABLE_ENUMPOLY)
+	# For enumpoly, sources starting in 'pel' are from Pelican;
+	# sources from gpartltr to quiksolv were formerly in convenience lib libpoly.
+	set(gambit_enumpoly_SOURCES
+		src/tools/enumpoly/pelclhpk.cc
+		src/tools/enumpoly/pelclhpk.h
+		src/tools/enumpoly/pelclqhl.cc
+		src/tools/enumpoly/pelclqhl.h
+		src/tools/enumpoly/pelclyal.cc
+		src/tools/enumpoly/pelclyal.h
+		src/tools/enumpoly/pelconv.cc
+		src/tools/enumpoly/pelconv.h
+		src/tools/enumpoly/peleval.cc
+		src/tools/enumpoly/peleval.h
+		src/tools/enumpoly/pelgennd.cc
+		src/tools/enumpoly/pelgennd.h
+		src/tools/enumpoly/pelgmatr.cc
+		src/tools/enumpoly/pelgmatr.h
+		src/tools/enumpoly/pelgntyp.h
+		src/tools/enumpoly/pelhomot.cc
+		src/tools/enumpoly/pelhomot.h
+		src/tools/enumpoly/pelpred.cc
+		src/tools/enumpoly/pelpred.h
+		src/tools/enumpoly/pelprgen.cc
+		src/tools/enumpoly/pelprgen.h
+		src/tools/enumpoly/pelproc.cc
+		src/tools/enumpoly/pelproc.h
+		src/tools/enumpoly/pelpscon.h
+		src/tools/enumpoly/pelpsys.cc
+		src/tools/enumpoly/pelpsys.h
+		src/tools/enumpoly/pelqhull.cc
+		src/tools/enumpoly/pelqhull.h
+		src/tools/enumpoly/pelsymbl.cc
+		src/tools/enumpoly/pelsymbl.h
+		src/tools/enumpoly/pelutils.cc
+		src/tools/enumpoly/pelutils.h
+		src/tools/enumpoly/gpartltr.cc
+		src/tools/enumpoly/gpartltr.h
+		src/tools/enumpoly/gpartltr.imp
+		src/tools/enumpoly/gpoly.cc
+		src/tools/enumpoly/gpoly.h
+		src/tools/enumpoly/gpoly.imp
+		src/tools/enumpoly/gpolyctr.h
+		src/tools/enumpoly/gpolylst.cc
+		src/tools/enumpoly/gpolylst.h
+		src/tools/enumpoly/gpolylst.imp
+		src/tools/enumpoly/gsolver.cc
+		src/tools/enumpoly/gsolver.h
+		src/tools/enumpoly/gsolver.imp
+		src/tools/enumpoly/ideal.cc
+		src/tools/enumpoly/ideal.h
+		src/tools/enumpoly/ideal.imp
+		src/tools/enumpoly/ineqsolv.cc
+		src/tools/enumpoly/ineqsolv.h
+		src/tools/enumpoly/ineqsolv.imp
+		src/tools/enumpoly/interval.cc
+		src/tools/enumpoly/interval.h
+		src/tools/enumpoly/interval.imp
+		src/tools/enumpoly/monomial.cc
+		src/tools/enumpoly/monomial.h
+		src/tools/enumpoly/monomial.imp
+		src/tools/enumpoly/pelclass.cc
+		src/tools/enumpoly/pelclass.h
+		src/tools/enumpoly/poly.cc
+		src/tools/enumpoly/poly.h
+		src/tools/enumpoly/poly.imp
+		src/tools/enumpoly/prepoly.cc
+		src/tools/enumpoly/prepoly.h
+		src/tools/enumpoly/quiksolv.cc
+		src/tools/enumpoly/quiksolv.h
+		src/tools/enumpoly/quiksolv.imp
+		src/tools/enumpoly/rectangl.cc
+		src/tools/enumpoly/rectangl.h
+		src/tools/enumpoly/rectangl.imp
+		src/tools/enumpoly/behavextend.cc
+		src/tools/enumpoly/behavextend.h
+		src/tools/enumpoly/complex.cc
+		src/tools/enumpoly/complex.h
+		src/tools/enumpoly/gtree.h
+		src/tools/enumpoly/gtree.imp
+		src/tools/enumpoly/linrcomb.cc
+		src/tools/enumpoly/linrcomb.h
+		src/tools/enumpoly/linrcomb.imp
+		src/tools/enumpoly/efgensup.cc
+		src/tools/enumpoly/efgensup.h
+		src/tools/enumpoly/gnarray.h
+		src/tools/enumpoly/gnarray.imp
+		src/tools/enumpoly/sfg.cc
+		src/tools/enumpoly/sfg.h
+		src/tools/enumpoly/sfstrat.cc
+		src/tools/enumpoly/sfstrat.h
+		src/tools/enumpoly/nfgensup.cc
+		src/tools/enumpoly/nfgensup.h
+		src/tools/enumpoly/odometer.cc
+		src/tools/enumpoly/odometer.h
+		src/tools/enumpoly/nfgcpoly.cc
+		src/tools/enumpoly/nfgcpoly.h
+		src/tools/enumpoly/nfghs.cc
+		src/tools/enumpoly/nfghs.h
+		src/tools/enumpoly/efgpoly.cc
+		src/tools/enumpoly/nfgpoly.cc
+		src/tools/enumpoly/enumpoly.cc
+	)
 
-# TODO: Add WITH_ENUMPOLY option
-add_executable(gambit-enumpoly ${gambit_enumpoly_SOURCES})
-target_link_libraries(gambit-enumpoly libgambit)
+	add_executable(gambit-enumpoly ${gambit_enumpoly_SOURCES})
+	target_link_libraries(gambit-enumpoly libgambit)
+endif()
 
 set(gambit_enumpure_SOURCES
 	src/tools/enumpure/enumpure.cc
@@ -507,14 +511,14 @@ set(gambit_SOURCES
 	src/gui/tinyxmlparser.cc
 )
 
-find_package(wxWidgets COMPONENTS core base adv)
-if(wxWidgets_FOUND)
-	# TODO: Check wxWidgets version
-	# TODO: Add WITH_GUI option
-	include(${wxWidgets_USE_FILE})
-	add_executable(gambit ${gambit_SOURCES})
-	target_link_libraries(gambit libgambit ${wxWidgets_LIBRARIES})
-else()
-	message("wxWidgets not found. The GUI will be unavailable")
+if(NOT Gambit_DISABLE_GUI)
+	find_package(wxWidgets COMPONENTS core base adv)
+	if(wxWidgets_FOUND)
+		# TODO: Check wxWidgets version
+		include(${wxWidgets_USE_FILE})
+		add_executable(gambit ${gambit_SOURCES})
+		target_link_libraries(gambit libgambit ${wxWidgets_LIBRARIES})
+	else()
+		message("wxWidgets not found. The GUI will be unavailable.")
+	endif()
 endif()
-
