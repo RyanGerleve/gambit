@@ -20,6 +20,7 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 //
 
+#include <cmath>
 #include <cstdlib>
 #include "pelclass.h"
 
@@ -28,8 +29,6 @@
 #include "gvector.h"
 #include "complex.h"
 */
-
-inline double abs(double x) { return fabs(x); }
 
 /*************************************************************/
 /************** Implementation of class Pelview **************/
