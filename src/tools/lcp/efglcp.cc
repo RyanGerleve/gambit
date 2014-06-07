@@ -22,7 +22,6 @@
 //
 
 #include <cstdio>
-#include <unistd.h>
 #include <iostream>
 #include "libgambit/libgambit.h"
 #include "efglcp.h"
