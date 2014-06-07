@@ -348,8 +348,6 @@ libgambit_la_SOURCES = \
 	src/libgambit/stratitr.h \
 	src/libgambit/stratspt.cc \
 	src/libgambit/stratspt.h \
-	src/libgambit/subgame.cc \
-	src/libgambit/subgame.h \
 	src/libgambit/nash.cc \
 	src/libgambit/nash.h \
 	src/libgambit/file.cc \
@@ -671,7 +669,9 @@ gambit_lp_SOURCES = \
 	${libgambit_la_SOURCES} \
 	${liblinear_la_SOURCES} \
 	src/tools/lp/efglp.cc \
+	src/tools/lp/efglp.h \
 	src/tools/lp/nfglp.cc \
+	src/tools/lp/nfglp.h \
 	src/tools/lp/lp.cc
 
 
