@@ -23,12 +23,14 @@
 
 #include <cstdlib>
 #include <cmath>
-#include <unistd.h>
 #include <iostream>
 #include <fstream>
 #include <cerrno>
 #include <iomanip>
+#include <boost/optional.hpp>
+#include <boost/program_options.hpp>
 #include "libgambit/libgambit.h"
+#include "tools/options.h"
 
 //
 // This program attempts to identify the quantal response equilibria
@@ -131,41 +133,37 @@ bool ReadProfile(std::istream &p_stream, Gambit::Array<double> &p_profile)
 
 int main(int argc, char *argv[])
 {
+  using namespace boost::program_options;
+
   int stopAfter = 100;
   double lambda;
   bool lambdaSpec = false;
   double tol = 1.0e-6;
   std::string startFile = "";
 
-  int c;
-  while ((c = getopt(argc, argv, "f:n:l:t:p:")) != -1) {
-    switch (c) {
-    case 'f':
-      g_numDecimals = atoi(optarg);
-      break;
-    case 'n':
-      stopAfter = atoi(optarg);
-      break;
-    case 'l':
-      lambda = atof(optarg);
-      lambdaSpec = true;
-      break;
-    case 't':
-      tol = pow(10.0, (double) -atoi(optarg));
-      break;
-    case 'p':
-      startFile = optarg;
-      break;
-    case '?':
-      if (isprint(optopt)) {
-	std::cerr << argv[0] << ": Unknown option `-" << ((char) optopt) << "'.\n";
-      }
-      else {
-	std::cerr << argv[0] << ": Unknown option character `\\x" << optopt << "`.\n";
-      }
+  ToolOptions options;
+  options.GetDesc().add_options()
+    ("num-decimals,f", value<int>(&g_numDecimals))
+    ("stop-after,n", value<int>(&stopAfter))
+    ("lambda,l", value<double>(&lambda))
+    ("tolerance,t", value<int>())
+    ("start-file,p", value<std::string>())
+  ;
+
+  options.Parse(argc, argv);
+
+  if (options.GetMap().count("lambda")) {
+    lambdaSpec = true;
+  }
+
+  if (options.GetMap().count("tolerance")) {
+    try {
+      const int exponent = options.GetMap()["tolerance"].as<int>();
+      tol = pow(10.0, (double) -exponent);
+    }
+    catch (boost::bad_any_cast& ex) {
+      std::cerr << ex.what() << std::endl;
       return 1;
-    default:
-      abort();
     }
   }
 
@@ -176,11 +174,12 @@ int main(int argc, char *argv[])
 
   std::istream* input_stream = &std::cin;
   std::ifstream file_stream;
-  if (optind < argc) {
-    file_stream.open(argv[optind]);
+  boost::optional<std::string> filename = options.Filename();
+  if (filename) {
+    file_stream.open(*filename);
     if (!file_stream.is_open()) {
       std::ostringstream error_message;
-      error_message << argv[0] << ": " << argv[optind];
+      error_message << argv[0] << ": " << *filename;
       perror(error_message.str().c_str());
       exit(1);
     }

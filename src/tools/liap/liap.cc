@@ -24,9 +24,10 @@
 #include <fstream>
 #include <cerrno>
 #include <cstdlib>
-#include <unistd.h>
-#include <getopt.h>
+#include <boost/optional.hpp>
+#include <boost/program_options.hpp>
 #include "libgambit/libgambit.h"
+#include "tools/options.h"
 
 void PrintBanner(std::ostream &p_stream)
 {
@@ -70,66 +71,41 @@ bool verbose = false;
 
 int main(int argc, char *argv[])
 {
-  opterr = 0;
-  bool quiet = false, useStrategic = false;
+  using namespace boost::program_options;
 
-  int long_opt_index = 0;
-  struct option long_options[] = {
-    { "help", 0, NULL, 'h'   },
-    { "version", 0, NULL, 'v'  },
-    { "verbose", 0, NULL, 'V'  },
-    { 0,    0,    0,    0   }
-  };
-  int c;
-  while ((c = getopt_long(argc, argv, "d:n:s:hqVvS", long_options, &long_opt_index)) != -1) {
-    switch (c) {
-    case 'v':
-      PrintBanner(std::cerr); exit(1);
-    case 'd':
-      g_numDecimals = atoi(optarg);
-      break;
-    case 'n':
-      m_numTries = atoi(optarg);
-      break;
-    case 's':
-      startFile = optarg;
-      break;
-    case 'h':
-      PrintHelp(argv[0]);
-      break;
-    case 'S':
-      useStrategic = true;
-      break;
-    case 'q':
-      quiet = true;
-      break;
-    case 'V':
-      verbose = true;
-      break;
-    case '?':
-      if (isprint(optopt)) {
-	std::cerr << argv[0] << ": Unknown option `-" << ((char) optopt) << "'.\n";
-      }
-      else {
-	std::cerr << argv[0] << ": Unknown option character `\\x" << optopt << "`.\n";
-      }
-      return 1;
-    default:
-      abort();
-    }
+  bool useStrategic = false;
+
+  ToolOptions options;
+  options.GetDesc().add_options()
+    ("num-decimals,d", value<int>(&g_numDecimals))
+    ("num-tries,n", value<int>(&m_numTries))
+    ("start-file,s", value<std::string>(&startFile))
+    ("use-strategic,S", bool_switch(&useStrategic))
+    ("verbose,V", bool_switch(&verbose))
+  ;
+
+  options.Parse(argc, argv);
+
+  if (options.Version()) {
+    PrintBanner(std::cerr); exit(1);
   }
 
-  if (!quiet) {
+  if (options.Help()) {
+    PrintHelp(argv[0]);
+  }
+
+  if (!options.Quiet()) {
     PrintBanner(std::cerr);
   }
 
   std::istream* input_stream = &std::cin;
   std::ifstream file_stream;
-  if (optind < argc) {
-    file_stream.open(argv[optind]);
+  boost::optional<std::string> filename = options.Filename();
+  if (filename) {
+    file_stream.open(*filename);
     if (!file_stream.is_open()) {
       std::ostringstream error_message;
-      error_message << argv[0] << ": " << argv[optind];
+      error_message << argv[0] << ": " << *filename;
       perror(error_message.str().c_str());
       exit(1);
     }

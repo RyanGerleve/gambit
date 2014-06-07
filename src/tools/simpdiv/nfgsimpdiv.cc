@@ -20,14 +20,15 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 //
 
-#include <unistd.h>
-#include <getopt.h>
 #include <cstdlib>
 #include <iostream>
 #include <cerrno>
 #include <iomanip>
 #include <fstream>
+#include <boost/optional.hpp>
+#include <boost/program_options.hpp>
 #include "libgambit/libgambit.h"
+#include "tools/options.h"
 
 //
 // simpdiv is a simplicial subdivision algorithm with restart, for finding
@@ -616,76 +617,52 @@ void PrintHelp(char *progname)
 
 int main(int argc, char *argv[])
 {
-  opterr = 0;
+  using namespace boost::program_options;
+
   std::string startFile;
   bool useRandom = false;
   int randDenom = 1, stopAfter = 1;
-  bool quiet = false;
 
-  int long_opt_index = 0;
-  struct option long_options[] = {
-    { "help", 0, NULL, 'h'   },
-    { "version", 0, NULL, 'v'  },
-    { "verbose", 0, NULL, 'V'  },
-    { 0,    0,    0,    0   }
-  };
-  int c;
-  while ((c = getopt_long(argc, argv, "g:hVvn:r:s:d:qS", long_options, &long_opt_index)) != -1) {
-    switch (c) {
-    case 'v':
-      PrintBanner(std::cerr); exit(1);
-    case 'd':
-      g_numDecimals = atoi(optarg);
-      g_useFloat = true;
-      break;
-    case 'g':
-      g_gridResize = atoi(optarg);
-      break;
-    case 'h':
-      PrintHelp(argv[0]);
-      break;
-    case 'r':
-      useRandom = true;
-      randDenom = atoi(optarg);
-      break;
-    case 'n':
-      stopAfter = atoi(optarg);
-      break;
-    case 's':
-      startFile = optarg;
-      break;
-    case 'q':
-      quiet = true;
-      break;
-    case 'V':
-      g_verbose = true;
-      break;
-    case 'S':
-      break;
-    case '?':
-      if (isprint(optopt)) {
-	std::cerr << argv[0] << ": Unknown option `-" << ((char) optopt) << "'.\n";
-      }
-      else {
-	std::cerr << argv[0] << ": Unknown option character `\\x" << optopt << "`.\n";
-      }
-      return 1;
-    default:
-      abort();
-    }
+  ToolOptions options;
+  options.GetDesc().add_options()
+    ("num-decimals,d", value<int>(&g_numDecimals))
+    ("grid-resize,g", value<int>(&g_gridResize))
+    ("rand-denom,r", value<int>(&randDenom))
+    ("stop-after,n", value<int>(&stopAfter))
+    ("start-file,s", value<std::string>(&startFile))
+    ("verbose,V", bool_switch(&g_verbose))
+  ;
+
+  options.Parse(argc, argv);
+
+  if (options.GetMap().count("num-decimals")) {
+    g_useFloat = true;
   }
 
-  if (!quiet) {
+  if (options.GetMap().count("rand-denom")) {
+    useRandom = true;
+  }
+
+  if (options.Version()) {
+    PrintBanner(std::cerr); exit(1);
+  }
+
+  if (options.Help()) {
+    PrintHelp(argv[0]);
+  }
+
+  if (!options.Quiet()) {
     PrintBanner(std::cerr);
   }
 
   std::istream* input_stream = &std::cin;
   std::ifstream file_stream;
-  if (optind < argc) {
-    file_stream.open(argv[optind]);
+  boost::optional<std::string> filename = options.Filename();
+  if (filename) {
+    file_stream.open(*filename);
     if (!file_stream.is_open()) {
       std::ostringstream error_message;
-      error_message << argv[0] << ": " << argv[optind];
+      error_message << argv[0] << ": " << *filename;
       perror(error_message.str().c_str());
       exit(1);
     }

@@ -21,16 +21,18 @@
 //
 
 #include <cstdlib>
-#include <unistd.h>
-#include <getopt.h>
 #include <iostream>
 #include <fstream>
 #include <cerrno>
 #include <iomanip>
 
+#include <boost/optional.hpp>
+#include <boost/program_options.hpp>
+
 #include "libgambit/libgambit.h"
 #include "clique.h"
 #include "vertenum.imp"
+#include "tools/options.h"
 
 
 using namespace Gambit;
@@ -305,64 +307,48 @@ void PrintHelp(char *progname)
 
 int main(int argc, char *argv[])
 {
-  int c;
-  bool useFloat = false, uselrs = false, quiet = false, eliminate = true;
+  using namespace boost::program_options;
 
-  int long_opt_index = 0;
-  struct option long_options[] = {
-    { "help", 0, NULL, 'h'   },
-    { "version", 0, NULL, 'v'  },
-    { 0,    0,    0,    0   }
-  };
-  while ((c = getopt_long(argc, argv, "d:DvhqcS", long_options, &long_opt_index)) != -1) {
-    switch (c) {
-    case 'v':
-      PrintBanner(std::cerr); exit(1);
-    case 'd':
-      useFloat = true;
-      g_numDecimals = atoi(optarg);
-      break;
-    case 'D':
-      eliminate = false;
-      break;
-    case 'L':
-      uselrs = true;
-      break;
-    case 'h':
-      PrintHelp(argv[0]);
-      break;
-    case 'c':
-      g_showConnect = true;
-      break;
-    case 'S':
-      break;
-    case 'q':
-      quiet = true;
-      break;
-    case '?':
-      if (isprint(optopt)) {
-	std::cerr << argv[0] << ": Unknown option `-" << ((char) optopt) << "'.\n";
-      }
-      else {
-	std::cerr << argv[0] << ": Unknown option character `\\x" << optopt << "`.\n";
-      }
-      return 1;
-    default:
-      abort();
-    }
+  bool useFloat = false, uselrs = false, eliminate = true;
+  
+  ToolOptions options;
+  options.GetDesc().add_options()
+    ("num-decimals,d", value<int>(&g_numDecimals))
+    ("dont-eliminate,D", "don't eliminate dominated strategies first")
+    ("uselrs,L", bool_switch(&uselrs))
+    ("show-connect,c", bool_switch(&g_showConnect))
+  ;
+
+  options.Parse(argc, argv);
+
+  if (options.GetMap().count("num-decimals")) {
+    useFloat = true;
   }
 
-  if (!quiet) {
+  if (options.GetMap().count("dont-eliminate")) {
+    eliminate = false;
+  }
+
+  if (options.Version()) {
+    PrintBanner(std::cerr); exit(1);
+  }
+
+  if (options.Help()) {
+    PrintHelp(argv[0]);
+  }
+
+  if (!options.Quiet()) {
     PrintBanner(std::cerr);
   }
 
   std::istream* input_stream = &std::cin;
   std::ifstream file_stream;
-  if (optind < argc) {
-    file_stream.open(argv[optind]);
+  boost::optional<std::string> filename = options.Filename();
+  if (filename) {
+    file_stream.open(*filename);
     if (!file_stream.is_open()) {
       std::ostringstream error_message;
-      error_message << argv[0] << ": " << argv[optind];
+      error_message << argv[0] << ": " << *filename;
       perror(error_message.str().c_str());
       exit(1);
     }

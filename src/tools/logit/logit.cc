@@ -25,11 +25,12 @@
 #include <fstream>
 #include <cstdlib>
 #include <cerrno>
-#include <unistd.h>
-#include <getopt.h>
+#include <boost/optional.hpp>
+#include <boost/program_options.hpp>
 #include "libgambit/libgambit.h"
 #include "efglogit.h"
 #include "nfglogit.h"
+#include "tools/options.h"
 
 
 void PrintBanner(std::ostream &p_stream)
@@ -87,9 +88,9 @@ bool ReadProfile(std::istream &p_stream, Gambit::Array<double> &p_profile)
 
 int main(int argc, char *argv[])
 {
-  opterr = 0;
+  using namespace boost::program_options;
 
-  bool quiet = false, useStrategic = false;
+  bool useStrategic = false;
   double maxLambda = 1000000.0;
   std::string mleFile = "", startFile = "";
   double maxDecel = 1.1;
@@ -98,74 +99,45 @@ int main(int argc, char *argv[])
   bool fullGraph = true;
   int decimals = 6;
 
-  int long_opt_index = 0;
-  struct option long_options[] = {
-    { "help", 0, NULL, 'h'   },
-    { "version", 0, NULL, 'v'  },
-    { 0,    0,    0,    0   }
-  };
-  int c;
-  while ((c = getopt_long(argc, argv, "d:s:a:m:vqehSL:p:l:", long_options, &long_opt_index)) != -1) {
-    switch (c) {
-    case 'v':
-      PrintBanner(std::cerr); exit(1);
-    case 'q':
-      quiet = true;
-      break;
-    case 'd':
-      decimals = atoi(optarg);
-      break;
-    case 's':
-      hStart = atof(optarg);
-      break;
-    case 'a':
-      maxDecel = atof(optarg);
-      break;
-    case 'm':
-      maxLambda = atof(optarg);
-      break;
-    case 'e':
-      fullGraph = false;
-      break;
-    case 'h':
-      PrintHelp(argv[0]);
-      break;
-    case 'S':
-      useStrategic = true;
-      break;
-    case 'L':
-      mleFile = optarg;
-      break;
-    case 'p':
-      startFile = optarg;
-      break;
-    case 'l':
-      targetLambda = atof(optarg);
-      break;
-    case '?':
-      if (isprint(optopt)) {
-	std::cerr << argv[0] << ": Unknown option `-" << ((char) optopt) << "'.\n";
-      }
-      else {
-	std::cerr << argv[0] << ": Unknown option character `\\x" << optopt << "`.\n";
-      }
-      return 1;
-    default:
-      abort();
-    }
+  ToolOptions options;
+  options.GetDesc().add_options()
+    ("num-decimals,d", value<int>(&decimals))
+    ("start-size,s", value<double>(&hStart))
+    ("max-decel,a", value<double>(&maxDecel))
+    ("max-lambda,m", value<double>(&maxLambda))
+    ("only-terminal,e", "print only the terminal equilibrium")
+    ("use-strategic,S", bool_switch(&useStrategic))
+    ("mle-file,L", value<std::string>(&mleFile))
+    ("start-file,p", value<std::string>(&startFile))
+    ("target-lambda,l", value<double>(&targetLambda))
+  ;
+
+  options.Parse(argc, argv);
+
+  if (options.GetMap().count("only-terminal")) {
+    fullGraph = false;
   }
 
-  if (!quiet) {
+  if (options.Version()) {
+    PrintBanner(std::cerr); exit(1);
+  }
+
+  if (options.Help()) {
+    PrintHelp(argv[0]);
+  }
+
+  if (!options.Quiet()) {
     PrintBanner(std::cerr);
   }
 
   std::istream* input_stream = &std::cin;
   std::ifstream file_stream;
-  if (optind < argc) { 
-    file_stream.open(argv[optind]);
+  boost::optional<std::string> filename = options.Filename();
+  if (filename) { 
+    file_stream.open(*filename);
     if (!file_stream.is_open()) {
       std::ostringstream error_message;
-      error_message << argv[0] << ": " << argv[optind];
+      error_message << argv[0] << ": " << *filename;
       perror(error_message.str().c_str());
       exit(1);
     }
@@ -235,7 +207,7 @@ int main(int argc, char *argv[])
   }
   catch (Gambit::InvalidFileException e) {
     std::cerr << "Error: Game not in a recognized format.\n";
-    if(!quiet) std::cerr<<e.what()<<endl;
+    if(!options.Quiet()) std::cerr<<e.what()<<endl;
     return 1;
   }
   catch (...) {
