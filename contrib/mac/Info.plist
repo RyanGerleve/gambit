@@ -9,9 +9,9 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>gambit</string>
+	<string>Gambit</string>
 	<key>CFBundleIconFile</key>
-	<string>gambit</string>
+	<string>Gambit</string>
 	<key>CFBundleName</key>
 	<string>Gambit</string>
 	<key>CFBundlePackageType</key>

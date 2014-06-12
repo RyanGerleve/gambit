@@ -42,13 +42,16 @@ include_directories(
 
 set(libagg_la_SOURCES
 	src/libgambit/gameagg.cc
-	src/libgambit/gameagg.h
 	src/libgambit/gamebagg.cc
+	src/libagg/agg.cc
+	src/libagg/bagg.cc
+)
+
+set(libagginclude_HEADERS
+	src/libgambit/gameagg.h
 	src/libgambit/gamebagg.h
 	src/libagg/GrayComposition.h
-	src/libagg/agg.cc
 	src/libagg/agg.h
-	src/libagg/bagg.cc
 	src/libagg/bagg.h
 	src/libagg/proj_func.h
 	src/libagg/trie_map.h
@@ -57,58 +60,62 @@ set(libagg_la_SOURCES
 
 set(libgambit_la_SOURCES
 	src/libgambit/integer.cc
-	src/libgambit/integer.h
 	src/libgambit/rational.cc
-	src/libgambit/rational.h
 	src/libgambit/shared_ptr.h
-	src/libgambit/array.h
-	src/libgambit/list.h
 	src/libgambit/vector.cc
-	src/libgambit/vector.h
-	src/libgambit/vector.imp
 	src/libgambit/pvector.cc
-	src/libgambit/pvector.h
-	src/libgambit/pvector.imp
 	src/libgambit/dvector.cc
-	src/libgambit/dvector.h
-	src/libgambit/dvector.imp
-	src/libgambit/recarray.h
 	src/libgambit/matrix.cc
-	src/libgambit/matrix.h
-	src/libgambit/matrix.imp
 	src/libgambit/sqmatrix.cc
-	src/libgambit/sqmatrix.h
-	src/libgambit/sqmatrix.imp
-	src/libgambit/number.h
 	src/libgambit/game.cc
-	src/libgambit/game.h
 	src/libgambit/gameexpl.h
 	src/libgambit/gametable.cc
 	src/libgambit/gametable.h
 	src/libgambit/gametree.cc
 	src/libgambit/gametree.h
 	src/libgambit/behav.cc
-	src/libgambit/behav.h
-	src/libgambit/behav.imp
 	src/libgambit/behavitr.cc
-	src/libgambit/behavitr.h
 	src/libgambit/behavspt.cc
-	src/libgambit/behavspt.h
 	src/libgambit/mixed.cc
-	src/libgambit/mixed.h
-	src/libgambit/mixed.imp
 	src/libgambit/stratitr.cc
-	src/libgambit/stratitr.h
 	src/libgambit/stratspt.cc
-	src/libgambit/stratspt.h
 	src/libgambit/nash.cc
 	src/libgambit/nash.h
 	src/libgambit/file.cc
-	src/libgambit/libgambit.h
 	${libagg_la_SOURCES}
 )
 
-add_library(libgambit ${libgambit_la_SOURCES})
+set(libgambitinclude_HEADERS
+	src/libgambit/integer.h
+	src/libgambit/rational.h
+	src/libgambit/array.h
+	src/libgambit/list.h
+	src/libgambit/vector.h
+	src/libgambit/vector.imp
+	src/libgambit/pvector.h
+	src/libgambit/pvector.imp
+	src/libgambit/dvector.h
+	src/libgambit/dvector.imp
+	src/libgambit/recarray.h
+	src/libgambit/matrix.h
+	src/libgambit/matrix.imp
+	src/libgambit/sqmatrix.h
+	src/libgambit/sqmatrix.imp
+	src/libgambit/number.h
+	src/libgambit/game.h
+	src/libgambit/behav.h
+	src/libgambit/behav.imp
+	src/libgambit/behavitr.h
+	src/libgambit/behavspt.h
+	src/libgambit/mixed.h
+	src/libgambit/mixed.imp
+	src/libgambit/stratitr.h
+	src/libgambit/stratspt.h
+	src/libgambit/libgambit.h
+	${libagginclude_HEADERS}
+)
+
+add_library(libgambit ${libgambit_la_SOURCES} ${libgambitinclude_HEADERS})
 
 set(gambit_nfg2html_SOURCES
 	src/tools/convert/nfg2html.cc
@@ -522,3 +529,47 @@ if(NOT Gambit_DISABLE_GUI)
 		message("wxWidgets not found. The GUI will be unavailable.")
 	endif()
 endif()
+
+
+# Install rules
+set(Gambit_INSTALL_TARGETS
+	gambit
+	gambit-enummixed
+	gambit-enumpure
+	gambit-gnm
+	gambit-ipa
+	gambit-lcp
+	gambit-liap
+	gambit-logit
+	gambit-lp
+	gambit-nfg-logitdyn
+	gambit-nfg2html
+	gambit-nfg2tex
+	gambit-simpdiv
+	gambit-testagg
+)
+
+if(NOT Gambit_DISABLE_ENUMPOLY)
+	list(APPEND Gambit_INSTALL_TARGETS gambit-enumpoly)
+endif()
+
+install(TARGETS ${Gambit_INSTALL_TARGETS}
+	RUNTIME DESTINATION bin
+)
+
+# Header files
+install(FILES ${libagginclude_HEADERS} DESTINATION include/libagg)
+install(FILES ${libgambitinclude_HEADERS} DESTINATION include/libgambit)
+
+
+# Packaging
+set(CPACK_GENERATOR "Bundle")
+set(CPACK_PACKAGE_FILE_NAME "Gambit")
+set(CPACK_BUNDLE_NAME "Gambit")
+set(CPACK_BUNDLE_ICON ${PROJECT_SOURCE_DIR}/contrib/mac/gambit.icns)
+set(CPACK_BUNDLE_PLIST ${PROJECT_SOURCE_DIR}/contrib/mac/Info.plist)
+
+# Copy the script to launch the executable in the bundle.
+set(CPACK_BUNDLE_STARTUP_COMMAND ${PROJECT_SOURCE_DIR}/contrib/mac/bundle-launch.sh)
+
+include(CPack)
